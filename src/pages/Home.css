@@ -1,0 +1,36 @@
+.home {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.home__intro {
+  margin-bottom: 1.75rem;
+}
+
+.home__heading {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #f3f1ec;
+  margin: 0 0 0.375rem;
+}
+
+.home__subheading {
+  color: #9aa1a6;
+  font-size: 0.9375rem;
+  margin: 0;
+}
+
+.home__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 480px) {
+  .home__grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.875rem;
+  }
+}
