@@ -1,0 +1,122 @@
+.header {
+  background-color: #14181a;
+  border-bottom: 1px solid rgba(243, 241, 236, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.header__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.875rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.header__brand {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 1.375rem;
+  color: #f3f1ec;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+}
+
+.header__nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-right: auto;
+}
+
+.header__link {
+  font-size: 0.9375rem;
+  color: #9aa1a6;
+  text-decoration: none;
+  padding: 0.375rem 0;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s ease;
+}
+
+.header__link:hover {
+  color: #f3f1ec;
+}
+
+.header__link--active {
+  color: #f3f1ec;
+  border-bottom-color: #e8a73e;
+}
+
+.header__search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header__search-input {
+  background-color: #1d2124;
+  border: 1px solid rgba(243, 241, 236, 0.12);
+  border-radius: 6px;
+  color: #f3f1ec;
+  font-size: 0.9375rem;
+  padding: 0.5rem 0.75rem;
+  width: 220px;
+  max-width: 100%;
+}
+
+.header__search-input::placeholder {
+  color: #6b7176;
+}
+
+.header__search-input:focus {
+  outline: none;
+  border-color: #e8a73e;
+}
+
+.header__search-button {
+  background-color: #e8a73e;
+  border: none;
+  border-radius: 6px;
+  color: #14181a;
+  cursor: pointer;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.5rem 0.9rem;
+  transition: background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.header__search-button:hover {
+  background-color: #f0b75c;
+}
+
+.header__search-button:focus-visible,
+.header__link:focus-visible,
+.header__brand:focus-visible,
+.header__search-input:focus-visible {
+  outline: 2px solid #e8a73e;
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .header__inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header__nav {
+    margin-right: 0;
+  }
+
+  .header__search {
+    width: 100%;
+  }
+
+  .header__search-input {
+    width: 100%;
+    flex: 1;
+  }
+}
