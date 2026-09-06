@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import type { Movie } from '../types/movie'
 import './MovieCard.css'
 
@@ -7,7 +8,7 @@ interface MovieCardProps {
 
 function MovieCard({ movie }: MovieCardProps) {
   return (
-    <article className="movie-card">
+    <Link to={`/movie/${movie.id}`} className="movie-card">
       <div className="movie-card__poster-wrap">
         <img
           src={movie.posterUrl}
@@ -23,7 +24,7 @@ function MovieCard({ movie }: MovieCardProps) {
           {movie.year} · {movie.genre}
         </p>
       </div>
-    </article>
+    </Link>
   )
 }
 

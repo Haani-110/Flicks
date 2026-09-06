@@ -5,4 +5,5 @@ export interface Movie {
   genre: string
   rating: number
   posterUrl: string
+  description: string
 }

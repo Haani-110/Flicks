@@ -2,11 +2,19 @@
   background-color: #1d2124;
   border-radius: 8px;
   overflow: hidden;
+  display: block;
+  color: inherit;
+  text-decoration: none;
   transition: transform 0.15s ease;
 }
 
 .movie-card:hover {
   transform: translateY(-3px);
+}
+
+.movie-card:focus-visible {
+  outline: 2px solid #e8a73e;
+  outline-offset: 2px;
 }
 
 .movie-card__poster-wrap {
