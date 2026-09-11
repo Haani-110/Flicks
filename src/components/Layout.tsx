@@ -28,6 +28,9 @@ export function Header() {
           <NavLink to="/watchlist" className={navLinkClass}>
             Watchlist
           </NavLink>
+          <NavLink to="/assistant" className={navLinkClass}>
+            Assistant
+          </NavLink>
           <NavLink to="/health" className={navLinkClass}>
             Health
           </NavLink>

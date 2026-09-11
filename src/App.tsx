@@ -5,6 +5,7 @@ import { Home } from "@/pages/Home";
 import { Watchlist } from "@/pages/Watchlist";
 import { MovieDetail } from "@/pages/MovieDetail";
 import { HealthCheck } from "@/pages/HealthCheck";
+import { Assistant } from "@/pages/Assistant";
 import { NotFound } from "@/pages/NotFound";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/watchlist" element={<Watchlist />} />
           <Route path="/movie/:id" element={<MovieDetail />} />
           <Route path="/health" element={<HealthCheck />} />
+          <Route path="/assistant" element={<Assistant />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         </Routes>
