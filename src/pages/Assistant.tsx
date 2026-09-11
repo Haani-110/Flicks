@@ -91,11 +91,14 @@ export function Assistant() {
 
   const send = async (text?: string) => {
     const rawValue = (text ?? input).trim();
+
     // Retry fallback: error state + empty composer reuses the failed message.
     const value =
-      rawValue || (sendState === "error" && lastFailedRef.current
+      rawValue ||
+      (sendState === "error" && lastFailedRef.current
         ? lastFailedRef.current
         : "");
+
     if (!value || inFlightRef.current || sendState === "loading") return;
 
     clearSuccessTimer();
@@ -110,9 +113,11 @@ export function Assistant() {
     let baseMessages = messages;
     const isRetry =
       !rawValue && sendState === "error" && lastFailedRef.current === value;
+
     if (isRetry && messages.length >= 2) {
       const secondLast = messages[messages.length - 2];
       const last = messages[messages.length - 1];
+
       if (
         secondLast.role === "user" &&
         secondLast.content === value &&
@@ -122,8 +127,18 @@ export function Assistant() {
       }
     }
 
-    const userMsg: ChatMsg = { id: uid(), role: "user", content: value };
-    const assistantMsg: ChatMsg = { id: uid(), role: "assistant", content: "" };
+    const userMsg: ChatMsg = {
+      id: uid(),
+      role: "user",
+      content: value,
+    };
+
+    const assistantMsg: ChatMsg = {
+      id: uid(),
+      role: "assistant",
+      content: "",
+    };
+
     const next = [...baseMessages, userMsg];
 
     setMessages([...next, assistantMsg]);
@@ -139,25 +154,43 @@ export function Assistant() {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+
+        // IMPORTANT:
+        // The backend expects AI SDK UIMessage objects with `parts`.
         body: JSON.stringify({
           messages: next
             .slice(-CLIENT_HISTORY_LIMIT)
-            .map((m) => ({ role: m.role, content: m.content })),
+            .map((m) => ({
+              id: m.id,
+              role: m.role,
+              parts: [
+                {
+                  type: "text",
+                  text: m.content,
+                },
+              ],
+            })),
         }),
+
         signal: controller.signal,
       });
 
       if (!res.ok) {
         let detail = "";
+
         try {
           const data = (await res.json()) as { error?: string };
           detail = data?.error ?? "";
         } catch {
           /* non-JSON error body */
         }
+
         throw new Error(detail || `Request failed (${res.status})`);
       }
-      if (!res.body) throw new Error("Empty response from server.");
+
+      if (!res.body) {
+        throw new Error("Empty response from server.");
+      }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -165,57 +198,79 @@ export function Assistant() {
 
       for (;;) {
         if (currentId !== requestIdRef.current) return;
+
         const { done, value: chunk } = await reader.read();
+
         if (done) break;
+
         const text = decoder.decode(chunk, { stream: true });
+
         if (!text) continue;
+
         if (firstChunk) {
           firstChunk = false;
           setStatus("streaming");
         }
+
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantMsg.id
               ? { ...m, content: m.content + text }
-              : m
-          )
+              : m,
+          ),
         );
       }
+
       if (currentId !== requestIdRef.current) return;
+
       inFlightRef.current = false;
       setStatus("idle");
       setSendState("success");
       lastFailedRef.current = null;
+
       successTimerRef.current = window.setTimeout(() => {
-        if (requestIdRef.current === currentId) setSendState("idle");
+        if (requestIdRef.current === currentId) {
+          setSendState("idle");
+        }
+
         successTimerRef.current = null;
       }, 1500);
     } catch (e) {
       if (currentId !== requestIdRef.current) return;
+
       inFlightRef.current = false;
+
       if (e instanceof DOMException && e.name === "AbortError") {
         // Stopped by the user — keep whatever streamed so far.
         setStatus("idle");
         setSendState("idle");
       } else {
-        const message = e instanceof Error ? e.message : "Something went wrong.";
+        const message =
+          e instanceof Error ? e.message : "Something went wrong.";
+
         setError(message);
         setSendState("error");
         lastFailedRef.current = value;
+
         setMessages((prev) =>
           prev.map((m) => {
             if (m.id !== assistantMsg.id) return m;
             if (m.content) return m;
+
             return {
               ...m,
-              content: "Sorry, I couldn't get a response. Please try again.",
+              content:
+                "Sorry, I couldn't get a response. Please try again.",
             };
-          })
+          }),
         );
+
         setStatus("idle");
       }
     } finally {
-      if (abortRef.current === controller) abortRef.current = null;
+      if (abortRef.current === controller) {
+        abortRef.current = null;
+      }
     }
   };
 
@@ -233,6 +288,7 @@ export function Assistant() {
 
   const handleInputChange = (value: string) => {
     setInput(value);
+
     // Typing a new message after a failure returns to idle; Retry stays
     // available via the error state while the composer is empty.
     if (sendState === "error" && value.trim()) {
@@ -260,9 +316,11 @@ export function Assistant() {
         <p className="text-sm font-medium uppercase tracking-widest text-[#e8a73e]">
           AI
         </p>
+
         <h1 className="text-2xl font-semibold tracking-tight text-[#f3f1ec] sm:text-3xl">
           Assistant
         </h1>
+
         <p className="max-w-xl text-sm text-[#9aa1a6] sm:text-base">
           Ask about the Flicks catalog. Responses stream in real time.
         </p>
@@ -282,9 +340,11 @@ export function Assistant() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#242a2e]">
                   <Bot className="h-6 w-6 text-[#e8a73e]" />
                 </div>
+
                 <p className="max-w-sm text-sm text-[#9aa1a6]">
                   Try one of these to get started:
                 </p>
+
                 <div className="flex flex-wrap items-center justify-center gap-2">
                   {SUGGESTIONS.map((s) => (
                     <button
@@ -303,17 +363,24 @@ export function Assistant() {
 
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
+
               const showThinking =
                 m.role === "assistant" &&
                 isLast &&
                 status === "thinking" &&
                 !m.content;
+
               const showCursor =
-                m.role === "assistant" && isLast && status === "streaming";
+                m.role === "assistant" &&
+                isLast &&
+                status === "streaming";
+
               return m.role === "user" ? (
                 <div key={m.id} className="flex justify-end">
                   <div className="max-w-[85%] rounded-lg bg-[#e8a73e] px-3 py-2 text-sm leading-relaxed text-[#1a1a1a]">
-                    <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                    <p className="whitespace-pre-wrap break-words">
+                      {m.content}
+                    </p>
                   </div>
                 </div>
               ) : (
@@ -329,10 +396,12 @@ export function Assistant() {
                           className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]"
                           style={{ animationDelay: "0ms" }}
                         />
+
                         <span
                           className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]"
                           style={{ animationDelay: "150ms" }}
                         />
+
                         <span
                           className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]"
                           style={{ animationDelay: "300ms" }}
@@ -341,6 +410,7 @@ export function Assistant() {
                     ) : (
                       <p className="whitespace-pre-wrap break-words">
                         {m.content}
+
                         {showCursor && (
                           <span
                             className="ml-1 inline-block h-3.5 w-1.5 animate-pulse bg-[#e8a73e]"
@@ -376,10 +446,12 @@ export function Assistant() {
               {error}
             </div>
           )}
+
           <form onSubmit={onSubmit} className="flex items-end gap-2">
             <label htmlFor="assistant-input" className="sr-only">
               Ask about movies
             </label>
+
             <textarea
               id="assistant-input"
               value={input}
@@ -392,12 +464,14 @@ export function Assistant() {
               disabled={busy}
               className="min-w-0 flex-1 resize-none rounded-md bg-[#101315] px-3 py-2 text-sm text-[#f3f1ec] ring-1 ring-[#262b2f] placeholder:text-[#9aa1a6]/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e8a73e] disabled:opacity-60"
             />
+
             <div className="flex shrink-0 items-center gap-2">
               <StatefulSendButton
                 state={sendState}
                 type="submit"
                 disabled={sendDisabled}
               />
+
               {busy && (
                 <button
                   type="button"
@@ -411,9 +485,11 @@ export function Assistant() {
               )}
             </div>
           </form>
+
           <p className="mt-2 text-xs text-[#9aa1a6]">
             Enter to send, Shift+Enter for a new line.
           </p>
+
           <div aria-live="polite" role="status" className="sr-only">
             {sendStatusMessage}
           </div>
