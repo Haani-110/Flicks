@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import type { FormEvent, KeyboardEvent } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import { DefaultChatTransport } from "ai";
+import {
+  ArrowDown,
+  Bot,
+  CheckCircle2,
+  Clock,
+  Search,
+  Send,
+  Square,
+  Star,
+  XCircle,
+} from "lucide-react";
+import type { UIMessage } from "ai";
 
 type SearchMovie = {
   id: number;
@@ -21,14 +34,194 @@ type SearchMoviesOutput = {
   movies: SearchMovie[];
 };
 
-type FlicksUIMessage = UIMessage;
+type SearchMoviesToolPart = {
+  type: "tool-search_movies";
+  state:
+    | "input-streaming"
+    | "input-available"
+    | "output-available"
+    | "output-error";
+  input?: {
+    query?: string;
+    genre?: string;
+    maxRuntime?: number;
+  };
+  output?: SearchMoviesOutput;
+  errorText?: string;
+};
+
+type FlicksMessage = UIMessage;
+
+function isSearchMoviesToolPart(
+  part: unknown,
+): part is SearchMoviesToolPart {
+  return (
+    typeof part === "object" &&
+    part !== null &&
+    "type" in part &&
+    (part as { type?: unknown }).type ===
+      "tool-search_movies"
+  );
+}
+
+function MovieSearchResults({
+  result,
+}: {
+  result: SearchMoviesOutput;
+}) {
+  if (result.count === 0) {
+    return (
+      <div className="card mt-3 p-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-[#f3f1ec]">
+          <Search className="h-4 w-4 text-[#e8a73e]" />
+          No movies found
+        </div>
+
+        <p className="mt-1 text-xs text-[#9aa1a6]">
+          Try a different genre, keyword, or runtime.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-[#e8a73e]" />
+
+          <span className="text-sm font-medium text-[#f3f1ec]">
+            {result.count}{" "}
+            {result.count === 1 ? "movie" : "movies"} found
+          </span>
+        </div>
+
+        {result.maxRuntime && (
+          <span className="text-xs text-[#9aa1a6]">
+            ≤ {result.maxRuntime} min
+          </span>
+        )}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {result.movies.map((movie) => (
+          <article
+            key={movie.id}
+            className="overflow-hidden rounded-lg border border-[#262b2f] bg-[#1d2124] transition-colors hover:border-[#3a4146]"
+          >
+            <div className="flex gap-3 p-3">
+              <div className="h-28 w-[74px] shrink-0 overflow-hidden rounded-md bg-[#242a2e]">
+                <img
+                  src={movie.posterPath}
+                  alt={`${movie.title} poster`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate text-sm font-medium text-[#f3f1ec]">
+                  {movie.title}
+                </h3>
+
+                <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-[#9aa1a6]">
+                  <span>{movie.year}</span>
+
+                  <span className="flex items-center gap-1">
+                    <Star className="h-3 w-3 fill-[#e8a73e] text-[#e8a73e]" />
+                    {movie.rating.toFixed(1)}
+                  </span>
+
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {movie.runtime} min
+                  </span>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {movie.genres.slice(0, 3).map((genre) => (
+                    <span
+                      key={genre}
+                      className="rounded-full bg-[#242a2e] px-2 py-0.5 text-[10px] text-[#9aa1a6]"
+                    >
+                      {genre}
+                    </span>
+                  ))}
+                </div>
+
+                <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-[#9aa1a6]">
+                  {movie.overview}
+                </p>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ToolPart({
+  part,
+}: {
+  part: SearchMoviesToolPart;
+}) {
+  if (part.state === "input-streaming") {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#262b2f] bg-[#14181a] px-3 py-2.5 text-xs text-[#9aa1a6]">
+        <Search className="h-3.5 w-3.5 animate-pulse text-[#e8a73e]" />
+        <span>Preparing Flicks catalog search…</span>
+      </div>
+    );
+  }
+
+  if (part.state === "input-available") {
+    return (
+      <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#262b2f] bg-[#14181a] px-3 py-2.5 text-xs text-[#9aa1a6]">
+        <Search className="h-3.5 w-3.5 animate-pulse text-[#e8a73e]" />
+        <span>Searching the Flicks catalog…</span>
+      </div>
+    );
+  }
+
+  if (part.state === "output-error") {
+    return (
+      <div className="mt-3 flex items-start gap-2 rounded-lg border border-[#e05555]/40 bg-[#e05555]/10 px-3 py-3">
+        <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#e05555]" />
+
+        <div>
+          <p className="text-xs font-medium text-[#f3f1ec]">
+            Catalog search failed
+          </p>
+
+          <p className="mt-1 text-xs text-[#9aa1a6]">
+            {part.errorText ||
+              "The movie search could not be completed."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    part.state === "output-available" &&
+    part.output
+  ) {
+    return <MovieSearchResults result={part.output} />;
+  }
+
+  return null;
+}
 
 export function Assistant() {
   const [input, setInput] = useState("");
-  const [userScrolledUp, setUserScrolledUp] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
-  const bottomRef = useRef<HTMLDivElement | null>(null);
-  const messagesContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(
+    null,
+  );
+
+  const atBottomRef = useRef(true);
 
   const {
     messages,
@@ -36,467 +229,341 @@ export function Assistant() {
     status,
     stop,
     error,
-  } = useChat<FlicksUIMessage>({
+  } = useChat<FlicksMessage>({
     transport: new DefaultChatTransport({
       api: "/api/chat",
     }),
   });
 
-  const isBusy = status === "submitted" || status === "streaming";
+  const busy =
+    status === "submitted" ||
+    status === "streaming";
 
-  useEffect(() => {
-    if (!userScrolledUp) {
-      bottomRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }
-  }, [messages, status, userScrolledUp]);
+  const scrollToBottom = (smooth = false) => {
+    const element = scrollRef.current;
 
-  const handleScroll = () => {
-    const container = messagesContainerRef.current;
+    if (!element) return;
 
-    if (!container) return;
-
-    const distanceFromBottom =
-      container.scrollHeight -
-      container.scrollTop -
-      container.clientHeight;
-
-    setUserScrolledUp(distanceFromBottom > 120);
+    element.scrollTo({
+      top: element.scrollHeight,
+      behavior: smooth ? "smooth" : "auto",
+    });
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleScroll = () => {
+    const element = scrollRef.current;
 
-    const text = input.trim();
+    if (!element) return;
 
-    if (!text || isBusy) return;
+    const atBottom =
+      element.scrollHeight -
+        element.scrollTop -
+        element.clientHeight <=
+      80;
 
-    setInput("");
-    setUserScrolledUp(false);
-
-    await sendMessage({
-      text,
-    });
+    atBottomRef.current = atBottom;
+    setIsAtBottom(atBottom);
   };
 
   const jumpToLatest = () => {
-    setUserScrolledUp(false);
+    atBottomRef.current = true;
+    setIsAtBottom(true);
+    scrollToBottom(true);
+  };
 
-    bottomRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
+  useEffect(() => {
+    if (atBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [messages, status]);
+
+  const send = async (text?: string) => {
+    const value = (text ?? input).trim();
+
+    if (!value || busy) return;
+
+    setInput("");
+
+    await sendMessage({
+      text: value,
     });
   };
 
-  return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      {/* Header */}
-      <div className="border-b px-4 py-4">
-        <div className="mx-auto max-w-4xl">
-          <h1 className="text-xl font-semibold">Flicks Assistant</h1>
-          <p className="text-sm text-muted-foreground">
-            Ask about movies in the Flicks catalog.
-          </p>
-        </div>
-      </div>
+  const onSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    void send();
+  };
 
-      {/* Messages */}
-      <div
-        ref={messagesContainerRef}
-        onScroll={handleScroll}
-        className="relative min-h-0 flex-1 overflow-y-auto"
-      >
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-6">
-          {messages.length === 0 && (
-            <div className="rounded-2xl border bg-card p-6 text-center">
-              <h2 className="mb-2 text-lg font-semibold">
-                What are you watching?
-              </h2>
-
-              <p className="text-sm text-muted-foreground">
-                Try asking:
-              </p>
-
-              <div className="mt-4 flex flex-wrap justify-center gap-2">
-                {[
-                  "Find me some action movies",
-                  "What are the best rated movies?",
-                  "Find sci-fi movies under 150 minutes",
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => setInput(suggestion)}
-                    className="rounded-full border px-4 py-2 text-sm transition hover:bg-muted"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {messages.map((message) => (
-            <MessageBubble key={message.id} message={message} />
-          ))}
-
-          {status === "submitted" && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="animate-pulse">●</span>
-              Flicks Assistant is thinking…
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm">
-              <p className="font-medium">Something went wrong.</p>
-              <p className="mt-1 text-muted-foreground">
-                {error.message || "The AI request failed. Please try again."}
-              </p>
-            </div>
-          )}
-
-          <div ref={bottomRef} />
-        </div>
-
-        {userScrolledUp && (
-          <button
-            type="button"
-            onClick={jumpToLatest}
-            className="sticky bottom-4 left-1/2 -translate-x-1/2 rounded-full border bg-background px-4 py-2 text-sm shadow-md"
-          >
-            ↓ Jump to latest
-          </button>
-        )}
-      </div>
-
-      {/* Input */}
-      <div className="border-t bg-background p-4">
-        <form
-          onSubmit={handleSubmit}
-          className="mx-auto flex max-w-4xl gap-2"
-        >
-          <input
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            disabled={isBusy}
-            placeholder="Ask Flicks Assistant…"
-            className="min-w-0 flex-1 rounded-xl border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-          />
-
-          {isBusy ? (
-            <button
-              type="button"
-              onClick={stop}
-              className="rounded-xl border px-5 py-3 text-sm font-medium"
-            >
-              Stop
-            </button>
-          ) : (
-            <button
-              type="submit"
-              disabled={!input.trim()}
-              className="rounded-xl bg-primary px-5 py-3 text-sm font-medium text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Send
-            </button>
-          )}
-        </form>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Message rendering                                                          */
-/* -------------------------------------------------------------------------- */
-
-function MessageBubble({
-  message,
-}: {
-  message: FlicksUIMessage;
-}) {
-  const isUser = message.role === "user";
+  const onKeyDown = (
+    event: KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      void send();
+    }
+  };
 
   return (
-    <div
-      className={`flex ${
-        isUser ? "justify-end" : "justify-start"
-      }`}
-    >
-      <div
-        className={`max-w-[85%] ${
-          isUser
-            ? "rounded-2xl rounded-br-md bg-primary px-4 py-3 text-primary-foreground"
-            : "w-full max-w-3xl"
-        }`}
-      >
-        <div className="space-y-3">
-          {message.parts.map((part, index) => (
-            <MessagePart
-              key={`${message.id}-${index}`}
-              part={part}
-              isUser={isUser}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Typed message parts                                                        */
-/* -------------------------------------------------------------------------- */
-
-function MessagePart({
-  part,
-  isUser,
-}: {
-  part: FlicksUIMessage["parts"][number];
-  isUser: boolean;
-}) {
-  /* Normal text */
-  if (part.type === "text") {
-    return (
-      <div
-        className={`whitespace-pre-wrap text-sm leading-6 ${
-          isUser ? "" : "rounded-2xl border bg-card px-4 py-3"
-        }`}
-      >
-        {part.text}
-      </div>
-    );
-  }
-
-  /*
-   * Tool lifecycle.
-   *
-   * AI SDK tool parts are named:
-   * tool-<toolName>
-   *
-   * Our tool is:
-   * tool-search_movies
-   */
-  if (part.type === "tool-search_movies") {
-    return <SearchMoviesToolPart part={part} />;
-  }
-
-  return null;
-}
-
-/* -------------------------------------------------------------------------- */
-/* search_movies tool lifecycle UI                                            */
-/* -------------------------------------------------------------------------- */
-
-function SearchMoviesToolPart({
-  part,
-}: {
-  part: Extract<
-    FlicksUIMessage["parts"][number],
-    { type: "tool-search_movies" }
-  >;
-}) {
-  /*
-   * STATE 1
-   * input-streaming
-   */
-  if (part.state === "input-streaming") {
-    return (
-      <div className="rounded-xl border bg-card p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-3 w-3 animate-pulse rounded-full bg-muted-foreground" />
-
-          <div>
-            <p className="text-sm font-medium">
-              Searching the Flicks catalog
-            </p>
-
-            <p className="text-xs text-muted-foreground">
-              Receiving search parameters…
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-   * STATE 2
-   * input-available
-   */
-  if (part.state === "input-available") {
-    return (
-      <div className="rounded-xl border bg-card p-4">
-        <div className="flex items-center gap-3">
-          <div className="h-3 w-3 animate-pulse rounded-full bg-primary" />
-
-          <div>
-            <p className="text-sm font-medium">
-              Searching the Flicks catalog
-            </p>
-
-            <p className="text-xs text-muted-foreground">
-              Search parameters received. Running catalog search…
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-3 rounded-lg bg-muted/50 px-3 py-2">
-          <p className="text-xs text-muted-foreground">
-            Tool: <span className="font-mono">search_movies</span>
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-   * STATE 3
-   * output-error
-   */
-  if (part.state === "output-error") {
-    return (
-      <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 text-destructive">⚠</div>
-
-          <div>
-            <p className="text-sm font-semibold">
-              Movie search failed
-            </p>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              {part.errorText || "The movie catalog could not be searched."}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-   * STATE 4
-   * output-available
-   *
-   * This is the important part for the capstone:
-   * the tool result is rendered as a real UI component,
-   * NOT as raw JSON.
-   */
-  if (part.state === "output-available") {
-    const output = part.output as SearchMoviesOutput;
-
-    return <MovieSearchResults output={output} />;
-  }
-
-  return null;
-}
-
-/* -------------------------------------------------------------------------- */
-/* Real tool-result component                                                 */
-/* -------------------------------------------------------------------------- */
-
-function MovieSearchResults({
-  output,
-}: {
-  output: SearchMoviesOutput;
-}) {
-  return (
-    <div className="rounded-2xl border bg-card p-4 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">
-            Movie search results
-          </p>
-
-          <p className="text-xs text-muted-foreground">
-            {output.count}{" "}
-            {output.count === 1 ? "movie" : "movies"} found
-          </p>
-        </div>
-
-        <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-          ✓ Complete
-        </div>
-      </div>
-
-      {output.count === 0 ? (
-        <div className="rounded-xl border border-dashed p-6 text-center">
-          <p className="text-sm font-medium">
-            No matching movies
-          </p>
-
-          <p className="mt-1 text-xs text-muted-foreground">
-            Try another genre, keyword, or runtime.
-          </p>
-        </div>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {output.movies.map((movie) => (
-            <MovieResultCard
-              key={movie.id}
-              movie={movie}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Movie result card                                                          */
-/* -------------------------------------------------------------------------- */
-
-function MovieResultCard({
-  movie,
-}: {
-  movie: SearchMovie;
-}) {
-  return (
-    <div className="overflow-hidden rounded-xl border bg-background">
-      <div className="flex gap-3 p-3">
-        <img
-          src={movie.posterPath}
-          alt={movie.title}
-          className="h-28 w-20 shrink-0 rounded-lg object-cover"
-        />
-
-        <div className="min-w-0">
-          <h3 className="truncate text-sm font-semibold">
-            {movie.title}
-          </h3>
-
-          <p className="mt-1 text-xs text-muted-foreground">
-            {movie.year} • {movie.runtime} min
-          </p>
-
-          <div className="mt-2 flex items-center gap-1 text-xs">
-            <span>★</span>
-            <span className="font-medium">
-              {movie.rating.toFixed(1)}
-            </span>
-          </div>
-
-          <div className="mt-2 flex flex-wrap gap-1">
-            {movie.genres.slice(0, 3).map((genre) => (
-              <span
-                key={genre}
-                className="rounded-full bg-muted px-2 py-0.5 text-[10px]"
-              >
-                {genre}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="border-t px-3 py-2">
-        <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
-          {movie.overview}
+    <div className="mx-auto w-full max-w-5xl space-y-6">
+      <header className="space-y-2">
+        <p className="text-sm font-medium uppercase tracking-widest text-[#e8a73e]">
+          AI
         </p>
+
+        <h1 className="text-2xl font-semibold tracking-tight text-[#f3f1ec] sm:text-3xl">
+          Assistant
+        </h1>
+
+        <p className="max-w-xl text-sm text-[#9aa1a6] sm:text-base">
+          Ask about the Flicks catalog. I can search
+          and recommend movies for you.
+        </p>
+      </header>
+
+      <div className="card flex flex-col overflow-hidden">
+        <div className="relative">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            role="log"
+            aria-label="Conversation"
+            className="h-[58vh] min-h-[360px] space-y-5 overflow-y-auto p-4 sm:p-6"
+          >
+            {messages.length === 0 && (
+              <div className="flex h-full flex-col items-center justify-center gap-4 text-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#242a2e]">
+                  <Bot className="h-7 w-7 text-[#e8a73e]" />
+                </div>
+
+                <div>
+                  <h2 className="text-base font-medium text-[#f3f1ec]">
+                    Welcome to Flicks Assistant
+                  </h2>
+
+                  <p className="mt-1 text-sm text-[#9aa1a6]">
+                    Try one of these:
+                  </p>
+                </div>
+
+                <div className="flex max-w-xl flex-wrap justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void send(
+                        "What movies are available?",
+                      )
+                    }
+                    className="btn btn-secondary text-xs"
+                  >
+                    What movies are available?
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void send(
+                        "Find me some sci-fi movies",
+                      )
+                    }
+                    className="btn btn-secondary text-xs"
+                  >
+                    Find me some sci-fi movies
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void send(
+                        "Find movies under 150 minutes",
+                      )
+                    }
+                    className="btn btn-secondary text-xs"
+                  >
+                    Find movies under 150 minutes
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {messages.map((message) => {
+              const isUser =
+                message.role === "user";
+
+              return (
+                <div
+                  key={message.id}
+                  className={
+                    isUser
+                      ? "flex justify-end"
+                      : "flex justify-start"
+                  }
+                >
+                  <div
+                    className={
+                      isUser
+                        ? "max-w-[88%] rounded-lg bg-[#e8a73e] px-4 py-3 text-sm leading-relaxed text-[#1a1a1a]"
+                        : "w-full max-w-[94%] rounded-lg bg-[#242a2e] px-4 py-3 text-sm leading-relaxed text-[#f3f1ec]"
+                    }
+                  >
+                    {message.parts.map(
+                      (part, index) => {
+                        if (part.type === "text") {
+                          return (
+                            <p
+                              key={`${message.id}-text-${index}`}
+                              className="whitespace-pre-wrap break-words"
+                            >
+                              {part.text}
+                            </p>
+                          );
+                        }
+
+                        if (
+                          !isUser &&
+                          isSearchMoviesToolPart(
+                            part,
+                          )
+                        ) {
+                          return (
+                            <ToolPart
+                              key={`${message.id}-tool-${index}`}
+                              part={part}
+                            />
+                          );
+                        }
+
+                        return null;
+                      },
+                    )}
+
+                    {!isUser &&
+                      message.parts.length === 0 &&
+                      status === "submitted" && (
+                        <span
+                          className="flex items-center gap-1.5"
+                          role="status"
+                        >
+                          <span className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]" />
+
+                          <span
+                            className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]"
+                            style={{
+                              animationDelay: "150ms",
+                            }}
+                          />
+
+                          <span
+                            className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]"
+                            style={{
+                              animationDelay: "300ms",
+                            }}
+                          />
+                        </span>
+                      )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg border border-[#e05555]/40 bg-[#e05555]/10 px-4 py-3 text-sm"
+              >
+                <div className="flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-[#e05555]" />
+
+                  <span className="font-medium text-[#f3f1ec]">
+                    Something went wrong
+                  </span>
+                </div>
+
+                <p className="mt-1 text-xs text-[#9aa1a6]">
+                  {error.message ||
+                    "Please try your request again."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {!isAtBottom &&
+            messages.length > 0 && (
+              <button
+                type="button"
+                onClick={jumpToLatest}
+                className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#14181a] px-3 py-1.5 text-xs font-medium text-[#f3f1ec] shadow-lg ring-1 ring-[#262b2f] transition-colors hover:bg-[#242a2e]"
+              >
+                <ArrowDown className="h-3.5 w-3.5" />
+                Jump to latest
+              </button>
+            )}
+        </div>
+
+        <div className="border-t border-[#262b2f] p-3 sm:p-4">
+          <form
+            onSubmit={onSubmit}
+            className="flex items-end gap-2"
+          >
+            <label
+              htmlFor="assistant-input"
+              className="sr-only"
+            >
+              Ask about movies
+            </label>
+
+            <textarea
+              id="assistant-input"
+              value={input}
+              onChange={(event) =>
+                setInput(event.target.value)
+              }
+              onKeyDown={onKeyDown}
+              rows={2}
+              disabled={busy}
+              placeholder={
+                busy
+                  ? "Searching the catalog…"
+                  : "Ask about movies…"
+              }
+              className="min-w-0 flex-1 resize-none rounded-md bg-[#101315] px-3 py-2 text-sm text-[#f3f1ec] ring-1 ring-[#262b2f] placeholder:text-[#9aa1a6]/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#e8a73e] disabled:opacity-60"
+            />
+
+            {busy ? (
+              <button
+                type="button"
+                onClick={() => stop()}
+                aria-label="Stop generating"
+                className="btn shrink-0 bg-[#e05555] text-white hover:bg-[#c94a4a]"
+              >
+                <Square className="h-4 w-4" />
+
+                <span className="hidden sm:inline">
+                  Stop
+                </span>
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                aria-label="Send message"
+                className="btn btn-primary shrink-0 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+
+                <span className="hidden sm:inline">
+                  Send
+                </span>
+              </button>
+            )}
+          </form>
+
+          <p className="mt-2 text-xs text-[#9aa1a6]">
+            Enter to send, Shift+Enter for a new line.
+          </p>
+        </div>
       </div>
     </div>
   );
