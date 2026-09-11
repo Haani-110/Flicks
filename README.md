@@ -1,32 +1,32 @@
-# React + TypeScript + Vite
+# Flicks
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Flicks is a movie discovery application built with React, TypeScript, Vite, and an AI assistant powered by OpenRouter and the AI SDK.
 
-Currently, two official plugins are available:
+## AI Movie Search Tool
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The Flicks AI assistant includes a server-side tool called `search_movies`.
 
-## React Compiler
+The tool allows the AI assistant to search the Flicks movie catalog using optional keywords, genres, and runtime limits.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Tool name
 
-## Expanding the Oxlint configuration
+`search_movies`
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### Tool schema
+
+The tool uses a typed Zod schema with the following parameters:
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `query` | `string` | No | Keyword to search in movie titles or descriptions |
+| `genre` | `string` | No | Movie genre such as Action, Drama, Comedy, Sci-Fi, Adventure, Crime, or History |
+| `maxRuntime` | `number` | No | Maximum movie runtime in minutes |
+
+Example tool input:
 
 ```json
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+  "query": "space",
+  "genre": "Sci-Fi",
+  "maxRuntime": 150
 }
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
