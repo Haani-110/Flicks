@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { streamText } from "ai";
+import { stepCountIs, streamText } from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+
+import { flicksTools } from "../lib/flicks-tools.js";
 import {
   ALLOWED_ROLES,
   CHAT_LIMITS,
@@ -18,14 +20,26 @@ function isAllowedRole(role: unknown): role is ChatMessage["role"] {
 }
 
 /**
- * POST /api/chat — streams a plain-text assistant reply.
+ * POST /api/chat
  *
- * Request body: { messages: [{ role: "user" | "assistant", content: string }] }
- * Response: text/plain streamed progressively (chunked).
+ * Streams an AI SDK UI message stream.
+ *
+ * The stream can contain:
+ * - assistant text
+ * - tool input streaming
+ * - tool input available
+ * - tool output available
+ * - tool output errors
+ *
+ * The API key remains server-side only.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(
+  req: VercelRequest,
+  res: VercelResponse
+) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
+
     return res.status(405).json({
       error: "Method not allowed. Use POST.",
     });
@@ -86,14 +100,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const cleaned: ChatMessage[] = [];
 
-  for (const m of raw) {
-    if (!m || typeof m !== "object") {
+  for (const message of raw) {
+    if (!message || typeof message !== "object") {
       return res.status(400).json({
         error: "Invalid message entry.",
       });
     }
 
-    const { role, content } = m as {
+    const { role, content } = message as {
       role?: unknown;
       content?: unknown;
     };
@@ -134,18 +148,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (
     history.length === 0 ||
-    !history.some((m) => m.role === "user")
+    !history.some((message) => message.role === "user")
   ) {
     return res.status(400).json({
       error: "At least one user message is required.",
     });
   }
 
-  // Abort the model call if the client disconnects
-  // (Stop button / navigation).
+  /**
+   * Abort the model/tool execution if the client disconnects.
+   * This preserves the existing Stop-button behavior.
+   */
   const controller = new AbortController();
 
-  const onClose = () => controller.abort();
+  const onClose = () => {
+    controller.abort();
+  };
 
   req.on("close", onClose);
 
@@ -156,50 +174,46 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const result = streamText({
       model: openrouter(OPENROUTER_MODEL_ID),
+
       system: buildSystemPrompt(),
-      messages: history.map((m) => ({
-        role: m.role,
-        content: m.content,
+
+      messages: history.map((message) => ({
+        role: message.role,
+        content: message.content,
       })),
+
+      /**
+       * Server-side Flicks tools.
+       */
+      tools: flicksTools,
+
+      /**
+       * Allow the model to call a tool and then continue
+       * with a normal assistant response after receiving
+       * the tool result.
+       */
+      stopWhen: stepCountIs(3),
+
       temperature: GENERATION_SETTINGS.temperature,
+
       maxOutputTokens:
         GENERATION_SETTINGS.maxOutputTokens,
+
       abortSignal: controller.signal,
     });
 
-    res.writeHead(200, {
-      "Content-Type": "text/plain; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Content-Type-Options": "nosniff",
+    /**
+     * AI SDK UI message stream.
+     *
+     * Unlike the previous text/plain stream, this stream
+     * carries typed tool lifecycle events as well as text.
+     */
+    result.pipeUIMessageStreamToResponse(res, {
+      headers: {
+        "Cache-Control": "no-cache, no-transform",
+        "X-Content-Type-Options": "nosniff",
+      },
     });
-
-    try {
-      for await (const delta of result.textStream) {
-        if (controller.signal.aborted) {
-          break;
-        }
-
-        if (!res.writable) {
-          break;
-        }
-
-        res.write(delta);
-      }
-    } catch (streamError) {
-      if (!controller.signal.aborted) {
-        console.error(
-          "[chat] stream error",
-          streamError
-        );
-      }
-    } finally {
-      req.off("close", onClose);
-
-      if (!res.writableEnded) {
-        res.end();
-      }
-    }
   } catch (error) {
     req.off("close", onClose);
 
@@ -215,8 +229,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (!res.headersSent) {
       return res.status(500).json({
-        error:
-          "AI request failed. Please try again.",
+        error: "AI request failed. Please try again.",
       });
     }
 
