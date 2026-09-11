@@ -1,14 +1,83 @@
-:root {
-  color-scheme: light dark;
+@import "tailwindcss";
+
+@theme {
+  /* Flicks palette */
+  --color-bg: #101315;
+  --color-header: #14181a;
+  --color-card: #1d2124;
+  --color-surface: #1d2124;
+  --color-border: #262b2f;
+  --color-text: #f3f1ec;
+  --color-muted: #9aa1a6;
+  --color-accent: #e8a73e;
+  --color-accent-hover: #f0b64d;
+  --color-danger: #e05555;
+
+  /* Typography */
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-* {
-  box-sizing: border-box;
+@layer base {
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url("https://fonts.gstatic.com/s/spacegrotesk/v16/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2") format("woff2");
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Focus styles */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background-color: #101315;
-  color: #f3f1ec;
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors;
+  }
+
+  .btn-primary {
+    background-color: var(--color-accent);
+    color: #1a1a1a;
+  }
+  .btn-primary:hover {
+    background-color: var(--color-accent-hover);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-card);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+  }
+  .btn-secondary:hover {
+    background-color: #242a2e;
+  }
+
+  .card {
+    background-color: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+  }
 }

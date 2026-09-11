@@ -1,59 +1,46 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
-import { NavLink } from 'react-router-dom'
-import './Header.css'
+import { NavLink } from "react-router-dom";
 
-function Header() {
-  const [searchTerm, setSearchTerm] = useState('')
+const navigation = [
+  { label: "Home", to: "/", end: true },
+  { label: "Watchlist", to: "/watchlist", end: false },
+  { label: "Health", to: "/health", end: false },
+];
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    // Search functionality will be implemented later.
-  }
-
+export function Header() {
   return (
-    <header className="header">
-      <div className="header__inner">
-        <NavLink to="/" className="header__brand">
-          Flicks
+    <header className="border-b border-white/8 bg-header">
+      <div className="mx-auto flex min-h-16 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <NavLink
+          to="/"
+          aria-label="Flicks home"
+          className="shrink-0 text-xl font-bold tracking-[-0.04em] text-text-primary transition-colors hover:text-accent"
+        >
+          Flicks<span className="text-accent">.</span>
         </NavLink>
 
-        <nav className="header__nav" aria-label="Primary">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) =>
-              isActive ? 'header__link header__link--active' : 'header__link'
-            }
-          >
-            Home
-          </NavLink>
-          <NavLink
-            to="/watchlist"
-            className={({ isActive }) =>
-              isActive ? 'header__link header__link--active' : 'header__link'
-            }
-          >
-            Watchlist
-          </NavLink>
+        <nav aria-label="Primary navigation">
+          <ul className="flex items-center gap-1 sm:gap-2">
+            {navigation.map((item) => (
+              <li key={item.to}>
+                <NavLink
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    [
+                      "block px-2 py-2 text-sm font-medium transition-colors sm:px-3",
+                      isActive
+                        ? "text-accent"
+                        : "text-text-secondary hover:text-text-primary",
+                    ].join(" ")
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
         </nav>
-
-        <form className="header__search" onSubmit={handleSearchSubmit} role="search">
-          <input
-            type="search"
-            className="header__search-input"
-            placeholder="Search movies..."
-            aria-label="Search movies"
-            value={searchTerm}
-            onChange={(event) => setSearchTerm(event.target.value)}
-          />
-          <button type="submit" className="header__search-button">
-            Search
-          </button>
-        </form>
       </div>
     </header>
-  )
+  );
 }
-
-export default Header
