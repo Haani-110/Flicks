@@ -19,7 +19,6 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ) {
-
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).json({
@@ -73,7 +72,7 @@ export default async function handler(
     });
   }
 
-  // Validate UI messages sent by useChat
+  // Validate UI messages sent by the frontend
   for (const message of messages) {
     if (!message || typeof message !== "object") {
       return res.status(400).json({
@@ -153,7 +152,8 @@ export default async function handler(
       abortSignal: controller.signal,
     });
 
-    result.pipeUIMessageStreamToResponse(res, {
+    // Send plain text to the existing frontend
+    result.pipeTextStreamToResponse(res, {
       headers: {
         "Cache-Control": "no-cache, no-transform",
         "X-Content-Type-Options": "nosniff",
