@@ -1,45 +1,26 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { stepCountIs, streamText } from "ai";
+import {
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+  type UIMessage,
+} from "ai";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
 import { flicksTools } from "../lib/flicks-tools.js";
 import {
-  ALLOWED_ROLES,
   CHAT_LIMITS,
   GENERATION_SETTINGS,
   OPENROUTER_MODEL_ID,
   buildSystemPrompt,
-  type ChatMessage,
 } from "../lib/flicks-ai.js";
 
-function isAllowedRole(role: unknown): role is ChatMessage["role"] {
-  return (
-    typeof role === "string" &&
-    (ALLOWED_ROLES as readonly string[]).includes(role)
-  );
-}
-
-/**
- * POST /api/chat
- *
- * Streams an AI SDK UI message stream.
- *
- * The stream can contain:
- * - assistant text
- * - tool input streaming
- * - tool input available
- * - tool output available
- * - tool output errors
- *
- * The API key remains server-side only.
- */
 export default async function handler(
   req: VercelRequest,
-  res: VercelResponse
+  res: VercelResponse,
 ) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-
     return res.status(405).json({
       error: "Method not allowed. Use POST.",
     });
@@ -70,95 +51,73 @@ export default async function handler(
     !body ||
     typeof body !== "object" ||
     !("messages" in body) ||
-    !Array.isArray(
-      (body as { messages: unknown }).messages
-    )
+    !Array.isArray((body as { messages?: unknown }).messages)
   ) {
     return res.status(400).json({
       error: "Request must include a messages array.",
     });
   }
 
-  const raw = (body as {
-    messages: unknown;
-  }).messages as Array<{
-    role?: unknown;
-    content?: unknown;
-  }>;
+  const messages = (body as { messages: UIMessage[] }).messages;
 
-  if (raw.length === 0) {
+  if (messages.length === 0) {
     return res.status(400).json({
       error: "messages must not be empty.",
     });
   }
 
-  if (raw.length > CHAT_LIMITS.maxMessagesPerRequest) {
+  if (messages.length > CHAT_LIMITS.maxMessagesPerRequest) {
     return res.status(400).json({
       error: "Too many messages in one request.",
     });
   }
 
-  const cleaned: ChatMessage[] = [];
-
-  for (const message of raw) {
+  // Validate UI messages sent by useChat
+  for (const message of messages) {
     if (!message || typeof message !== "object") {
       return res.status(400).json({
         error: "Invalid message entry.",
       });
     }
 
-    const { role, content } = message as {
-      role?: unknown;
-      content?: unknown;
-    };
-
-    if (!isAllowedRole(role)) {
+    if (
+      message.role !== "user" &&
+      message.role !== "assistant"
+    ) {
       return res.status(400).json({
-        error: "Invalid role. Allowed: user, assistant.",
+        error: "Invalid message role.",
       });
     }
 
-    if (typeof content !== "string") {
+    if (!Array.isArray(message.parts)) {
       return res.status(400).json({
-        error: "Message content must be a string.",
+        error: "Message parts are missing.",
       });
     }
 
-    const trimmed = content.trim();
-
-    if (!trimmed) {
-      continue;
+    for (const part of message.parts) {
+      if (
+        part.type === "text" &&
+        typeof part.text === "string" &&
+        part.text.length > CHAT_LIMITS.maxMessageChars
+      ) {
+        return res.status(400).json({
+          error: "A message is too long.",
+        });
+      }
     }
-
-    if (trimmed.length > CHAT_LIMITS.maxMessageChars) {
-      return res.status(400).json({
-        error: "A message is too long.",
-      });
-    }
-
-    cleaned.push({
-      role,
-      content: trimmed,
-    });
   }
 
-  const history = cleaned.slice(
-    -CHAT_LIMITS.maxHistoryMessages
+  const history = messages.slice(
+    -CHAT_LIMITS.maxHistoryMessages,
   );
 
-  if (
-    history.length === 0 ||
-    !history.some((message) => message.role === "user")
-  ) {
+  if (!history.some((message) => message.role === "user")) {
     return res.status(400).json({
       error: "At least one user message is required.",
     });
   }
 
-  /**
-   * Abort the model/tool execution if the client disconnects.
-   * This preserves the existing Stop-button behavior.
-   */
   const controller = new AbortController();
 
   const onClose = () => {
@@ -172,26 +131,17 @@ export default async function handler(
       apiKey,
     });
 
+    const modelMessages = await convertToModelMessages(history);
+
     const result = streamText({
       model: openrouter(OPENROUTER_MODEL_ID),
 
       system: buildSystemPrompt(),
 
-      messages: history.map((message) => ({
-        role: message.role,
-        content: message.content,
-      })),
+      messages: modelMessages,
 
-      /**
-       * Server-side Flicks tools.
-       */
       tools: flicksTools,
 
-      /**
-       * Allow the model to call a tool and then continue
-       * with a normal assistant response after receiving
-       * the tool result.
-       */
       stopWhen: stepCountIs(3),
 
       temperature: GENERATION_SETTINGS.temperature,
@@ -202,12 +152,6 @@ export default async function handler(
       abortSignal: controller.signal,
     });
 
-    /**
-     * AI SDK UI message stream.
-     *
-     * Unlike the previous text/plain stream, this stream
-     * carries typed tool lifecycle events as well as text.
-     */
     result.pipeUIMessageStreamToResponse(res, {
       headers: {
         "Cache-Control": "no-cache, no-transform",
@@ -215,17 +159,14 @@ export default async function handler(
       },
     });
   } catch (error) {
-    req.off("close", onClose);
+    console.error("[chat] error", error);
 
     if (controller.signal.aborted) {
       if (!res.writableEnded) {
         res.end();
       }
-
       return;
     }
-
-    console.error("[chat] error", error);
 
     if (!res.headersSent) {
       return res.status(500).json({
@@ -236,5 +177,7 @@ export default async function handler(
     if (!res.writableEnded) {
       res.end();
     }
+  } finally {
+    req.off("close", onClose);
   }
 }
