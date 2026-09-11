@@ -1,4 +1,4 @@
-import { movies } from "../src/data/movies";
+import { movies } from "../src/data/movies.js";
 
 /**
  * Single source of truth for Flicks AI configuration.
