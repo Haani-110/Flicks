@@ -7,11 +7,13 @@ import { MovieDetail } from "@/pages/MovieDetail";
 import { HealthCheck } from "@/pages/HealthCheck";
 import { Assistant } from "@/pages/Assistant";
 import { NotFound } from "@/pages/NotFound";
+import { AppErrorBoundary } from "@/error";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <WatchlistProvider>
+    <AppErrorBoundary>
+      <BrowserRouter>
+        <WatchlistProvider>
         <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />
@@ -22,7 +24,8 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
         </Routes>
-      </WatchlistProvider>
-    </BrowserRouter>
+        </WatchlistProvider>
+      </BrowserRouter>
+    </AppErrorBoundary>
   );
 }

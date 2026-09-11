@@ -78,8 +78,16 @@ function MovieSearchResults({
         </div>
 
         <p className="mt-1 text-xs text-[#9aa1a6]">
-          Try a different genre, keyword, or runtime.
+          Try a broader keyword, another genre, or a shorter runtime.
         </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("flicks:assistant-suggestion", { detail: "Find me some sci-fi movies" }))} className="btn btn-secondary text-xs">
+            Try sci-fi
+          </button>
+          <button type="button" onClick={() => window.dispatchEvent(new CustomEvent("flicks:assistant-suggestion", { detail: "Find movies under 150 minutes" }))} className="btn btn-secondary text-xs">
+            Under 150 min
+          </button>
+        </div>
       </div>
     );
   }
@@ -226,6 +234,7 @@ export function Assistant() {
   const {
     messages,
     sendMessage,
+    regenerate,
     status,
     stop,
     error,
@@ -276,6 +285,15 @@ export function Assistant() {
       scrollToBottom();
     }
   }, [messages, status]);
+
+  useEffect(() => {
+    const handleSuggestion = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      void send(customEvent.detail);
+    };
+    window.addEventListener("flicks:assistant-suggestion", handleSuggestion);
+    return () => window.removeEventListener("flicks:assistant-suggestion", handleSuggestion);
+  });
 
   const send = async (text?: string) => {
     const value = (text ?? input).trim();
@@ -473,18 +491,29 @@ export function Assistant() {
                 role="alert"
                 className="rounded-lg border border-[#e05555]/40 bg-[#e05555]/10 px-4 py-3 text-sm"
               >
-                <div className="flex items-center gap-2">
-                  <XCircle className="h-4 w-4 text-[#e05555]" />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-start gap-2">
+                    <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#e05555]" />
+                    <div className="min-w-0">
+                      <span className="font-medium text-[#f3f1ec]">
+                        We couldn't complete that request
+                      </span>
+                      <p className="mt-1 text-xs text-[#9aa1a6]">
+                        {error.message ||
+                          "The connection was interrupted. Please try again."}
+                      </p>
+                    </div>
+                  </div>
 
-                  <span className="font-medium text-[#f3f1ec]">
-                    Something went wrong
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void regenerate()}
+                    disabled={busy}
+                    className="btn btn-secondary shrink-0 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Try again
+                  </button>
                 </div>
-
-                <p className="mt-1 text-xs text-[#9aa1a6]">
-                  {error.message ||
-                    "Please try your request again."}
-                </p>
               </div>
             )}
           </div>
