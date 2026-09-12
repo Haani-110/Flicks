@@ -43,19 +43,22 @@ test("a visitor gets a streamed answer with its catalog results", async ({
     page.getByRole("heading", { name: "Assistant" }),
   ).toBeVisible();
 
-  await page.getByRole("textbox", { name: "Ask about movies" }).fill(CHAT_QUESTION);
-  await page.getByRole("button", { name: "Send message" }).click();
+  // The page also hosts a button playground, so chat queries stay in the chat.
+  const chat = page.getByRole("region", { name: "Assistant chat" });
+
+  await chat.getByRole("textbox", { name: "Ask about movies" }).fill(CHAT_QUESTION);
+  await chat.getByRole("button", { name: "Send message" }).click();
 
   await expect(
-    page.getByRole("article", { name: "Your message" }),
+    chat.getByRole("article", { name: "Your message" }),
   ).toContainText(CHAT_QUESTION);
 
-  const answer = page.getByRole("article", { name: "Assistant message" });
+  const answer = chat.getByRole("article", { name: "Assistant message" });
   await expect(answer).toContainText(CHAT_ANSWER);
   await expect(answer).not.toHaveAttribute("aria-busy", "true");
 
   // The tool call and its results are rendered as parts, with catalog links.
-  const toolCard = page.getByRole("region", { name: "Catalog search" });
+  const toolCard = chat.getByRole("region", { name: "Catalog search" });
   await expect(toolCard).toBeVisible();
   await expect(
     toolCard.getByRole("list", { name: "Search results" }),
@@ -89,12 +92,16 @@ test("a failing assistant route tells the reader what happened", async ({
 
   await page.goto("/assistant");
 
-  await page.getByRole("textbox", { name: "Ask about movies" }).fill(CHAT_QUESTION);
-  await page.getByRole("button", { name: "Send message" }).click();
+  const chat = page.getByRole("region", { name: "Assistant chat" });
 
-  await expect(page.getByRole("alert")).toHaveText("AI is not configured.");
+  await chat.getByRole("textbox", { name: "Ask about movies" }).fill(CHAT_QUESTION);
+  await chat.getByRole("button", { name: "Send message" }).click();
+
+  await expect(chat.getByRole("alert")).toHaveText("AI is not configured.");
   await expect(
-    page.getByRole("button", { name: "Send failed. Activate to retry." }),
+    chat.getByRole("button", { name: "Send failed. Activate to retry." }),
   ).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Ask about movies" })).toBeEnabled();
+  await expect(
+    chat.getByRole("textbox", { name: "Ask about movies" }),
+  ).toBeEnabled();
 });
