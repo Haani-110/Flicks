@@ -1,0 +1,89 @@
+
+ RUN  v5.0.0 /home/user/Flicks
+
+ ❯ src/components/chat/ToolCallCard.test.tsx (10 tests | 1 failed) 212ms
+   ❯ ToolCallCard (10)
+     ✓ shows a preparing status while the tool input is still streaming 110ms
+     ✓ shows the executing status and the filters it was called with 13ms
+     ✓ renders results with a link per match once the tool output arrives 46ms
+     × explains an empty result set instead of showing an empty list 9ms
+     ✓ surfaces a tool failure as an alert 7ms
+     ✓ degrades gracefully when the tool output does not match the schema 5ms
+     ✓ labels an unknown tool with its own name 5ms
+     ✓ waits for approval instead of running the tool 6ms
+     ✓ reports a denied tool call as an alert 9ms
+     ✓ ignores partial filters while the input is still streaming 1ms
+ ✓ src/pages/Assistant.test.tsx (9 tests) 3247ms
+   ✓ Assistant (9)
+     ✓ shows starter suggestions and posts the chosen one as UIMessage parts 304ms
+     ✓ sends the whole conversation back, tool parts included 1498ms
+ ✓ lib/flicks-tools.test.ts (6 tests) 1513ms
+   ✓ search_movies tool (6)
+     ✓ filters the real catalog by genre and runtime 502ms
+     ✓ returns output the chat can render 503ms
+     ✓ returns an empty list rather than throwing when nothing matches 501ms
+ ✓ src/components/chat/ChatComposer.test.tsx (10 tests) 645ms
+stderr | api/chat.test.ts > POST /api/chat > reports a provider failure inside the stream, without leaking the cause
+Error: provider exploded: sk-secret
+    at doStream (/home/user/Flicks/api/chat.test.ts:219:15)
+    at MockLanguageModelV3.doStream (file:///home/user/Flicks/node_modules/ai/dist/test/index.mjs:113:16)
+    at fn (file:///home/user/Flicks/node_modules/ai/dist/index.mjs:8076:43)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/user/Flicks/node_modules/ai/dist/index.mjs:2472:24
+
+stderr | api/chat.test.ts > POST /api/chat > reports a provider failure inside the stream, without leaking the cause
+[chat] stream error Error: provider exploded: sk-secret
+    at doStream (/home/user/Flicks/api/chat.test.ts:219:15)
+    at MockLanguageModelV3.doStream (file:///home/user/Flicks/node_modules/ai/dist/test/index.mjs:113:16)
+    at fn (file:///home/user/Flicks/node_modules/ai/dist/index.mjs:8076:43)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/user/Flicks/node_modules/ai/dist/index.mjs:2472:24
+
+ ✓ api/chat.test.ts (6 tests) 545ms
+   ✓ POST /api/chat (6)
+     ✓ runs the catalog tool and streams its result to the client 510ms
+ ✓ src/pages/Home.test.tsx (2 tests) 417ms
+   ✓ Home page (2)
+     ✓ shows every catalog movie to a first-time visitor 343ms
+ ✓ src/pages/MovieDetail.test.tsx (5 tests) 344ms
+ ✓ src/components/MovieCard.test.tsx (4 tests) 224ms
+ ✓ src/components/chat/ChatMessage.test.tsx (11 tests) 255ms
+ ✓ src/components/StatefulSendButton.test.tsx (8 tests) 207ms
+ ✓ src/pages/Watchlist.test.tsx (2 tests) 185ms
+ ✓ src/pages/HealthCheck.test.tsx (3 tests) 178ms
+ ✓ src/components/Layout.test.tsx (2 tests) 185ms
+ ✓ src/test/ui-message-stream.test.ts (3 tests) 19ms
+ ✓ src/lib/chat-contract.test.ts (6 tests) 13ms
+ ✓ src/lib/chat-transport.test.ts (4 tests) 6ms
+ ✓ src/lib/chat-errors.test.ts (5 tests) 4ms
+ ✓ src/test/network-guard.test.ts (2 tests) 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/components/chat/ToolCallCard.test.tsx > ToolCallCard > explains an empty result set instead of showing an empty list
+Error: expect(element).toHaveTextContent()
+
+Expected element to have text content:
+  No movies matched that search.
+Received:
+  Catalog search0 resultsGenreWestern0 movies found
+ ❯ src/components/chat/ToolCallCard.test.tsx:79:20
+     77|     );
+     78|
+     79|     expect(card()).toHaveTextContent("No movies matched that search.");
+       |                    ^
+     80|     expect(screen.queryByRole("list", { name: "Search results" })).not…
+     81|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 17 passed (18)
+      Tests  1 failed | 97 passed (98)
+   Start at  11:17:16
+   Duration  22.36s (environment 43%, tests 40%, import 8%, setup 7%, transform 2%)
+
+Environment  jsdom was created 18 times · 8.85s total, 43% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+

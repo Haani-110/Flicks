@@ -1,0 +1,69 @@
+
+ RUN  v5.0.0 /home/user/Flicks
+      Coverage enabled with v8
+
+ ✓ src/components/chat/ToolCallCard.test.tsx (10 tests) 254ms
+ ✓ src/pages/Assistant.test.tsx (9 tests) 3672ms
+   ✓ Assistant (9)
+     ✓ shows starter suggestions and posts the chosen one as UIMessage parts 311ms
+     ✓ shows the pending state until the route answers 358ms
+     ✓ streams text and tool results into the transcript 322ms
+     ✓ sends the whole conversation back, tool parts included 1592ms
+ ✓ lib/flicks-tools.test.ts (6 tests) 1513ms
+   ✓ search_movies tool (6)
+     ✓ filters the real catalog by genre and runtime 501ms
+     ✓ returns output the chat can render 504ms
+     ✓ returns an empty list rather than throwing when nothing matches 501ms
+ ✓ src/components/chat/ChatComposer.test.tsx (10 tests) 783ms
+stderr | api/chat.test.ts > POST /api/chat > reports a provider failure inside the stream, without leaking the cause
+Error: provider exploded: sk-secret
+    at doStream (/home/user/Flicks/api/chat.test.ts:219:15)
+    at MockLanguageModelV3.doStream (file:///home/user/Flicks/node_modules/ai/dist/test/index.mjs:113:16)
+    at fn (file:///home/user/Flicks/node_modules/ai/dist/index.mjs:8076:43)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/user/Flicks/node_modules/ai/dist/index.mjs:2472:24
+
+stderr | api/chat.test.ts > POST /api/chat > reports a provider failure inside the stream, without leaking the cause
+[chat] stream error Error: provider exploded: sk-secret
+    at doStream (/home/user/Flicks/api/chat.test.ts:219:15)
+    at MockLanguageModelV3.doStream (file:///home/user/Flicks/node_modules/ai/dist/test/index.mjs:113:16)
+    at fn (file:///home/user/Flicks/node_modules/ai/dist/index.mjs:8076:43)
+    at processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at file:///home/user/Flicks/node_modules/ai/dist/index.mjs:2472:24
+
+ ✓ api/chat.test.ts (6 tests) 549ms
+   ✓ POST /api/chat (6)
+     ✓ runs the catalog tool and streams its result to the client 511ms
+ ✓ src/pages/Home.test.tsx (2 tests) 603ms
+   ✓ Home page (2)
+     ✓ shows every catalog movie to a first-time visitor 485ms
+ ✓ src/pages/MovieDetail.test.tsx (5 tests) 566ms
+ ✓ src/components/chat/ChatMessage.test.tsx (11 tests) 259ms
+ ✓ src/components/MovieCard.test.tsx (4 tests) 237ms
+ ✓ src/components/StatefulSendButton.test.tsx (8 tests) 236ms
+ ✓ src/components/Layout.test.tsx (2 tests) 190ms
+ ✓ src/pages/Watchlist.test.tsx (2 tests) 237ms
+ ✓ src/pages/HealthCheck.test.tsx (3 tests) 193ms
+ ✓ src/test/ui-message-stream.test.ts (3 tests) 19ms
+ ✓ src/lib/chat-contract.test.ts (6 tests) 9ms
+ ✓ src/lib/chat-transport.test.ts (4 tests) 6ms
+ ✓ src/test/network-guard.test.ts (2 tests) 6ms
+ ✓ src/lib/chat-errors.test.ts (5 tests) 5ms
+
+ Test Files  18 passed (18)
+      Tests  98 passed (98)
+   Start at  11:17:45
+   Duration  25.52s (tests 40%, environment 40%, import 8%, setup 7%, worker 2%, transform 2%)
+
+Environment  jsdom was created 18 times · 9.19s total, 40% of tracked time
+             create it once per worker with pool: 'vmThreads' (keeps per-file isolation) or isolate: false (shares it across files)
+             learn more: https://vitest.dev/guide/improving-performance#test-environments
+
+ % Coverage report from v8
+
+=============================== Coverage summary ===============================
+Statements   : 76.29% ( 325/426 )
+Branches     : 78.77% ( 282/358 )
+Functions    : 75.43% ( 86/114 )
+Lines        : 79.84% ( 305/382 )
+================================================================================

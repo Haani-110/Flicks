@@ -30,7 +30,13 @@ jobs:
         run: npm run typecheck
 
       - name: Component tests with coverage
-        run: npm run test:coverage
+        run: npm run test:coverage -- --reporter=default --reporter=json --outputFile=vitest-report.json
+
+      # Publishes the totals on the run page, so a green CI run states what it
+      # verified instead of hiding it in a job log.
+      - name: Summarize test results
+        if: always()
+        run: node scripts/ci-summary.mjs vitest-report.json
 
       - name: Upload coverage report
         if: always()
