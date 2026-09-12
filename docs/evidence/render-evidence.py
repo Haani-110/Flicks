@@ -376,7 +376,7 @@ sources = [name for name in ("ci-run.json", "ci-run-jobs.json", "ci-check-runs.j
                              "artifacts.json", "vitest-results.json", "context.json") if (RUN_DIR / name).exists()]
 note = [
     f"Re-drawn from GitHub Actions REST API data for run {run['id']} (commit {run['head_sha'][:7]}, "
-    f"branch {run['head_branch']}): {', '.join(sources)}.",
+    f"branch {run['head_branch']}) — {len(sources)} source files alongside this image.",
     f"Source: {run['html_url']} — this sandbox has no browser, so the run page is rebuilt from its API data "
     "rather than screen-captured.",
 ]
