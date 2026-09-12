@@ -3,6 +3,25 @@ import { StatefulSendButton, type SendButtonState } from "./StatefulSendButton";
 
 type DemoMode = "random" | "success" | "error";
 
+/**
+ * Both buttons in this playground used to announce themselves as "Send
+ * message" in every state, because that is the component's default. They do
+ * different things, so they now say so.
+ */
+const PRIMARY_STATUS_LABELS: Record<SendButtonState, string> = {
+  idle: "Run a simulated send",
+  loading: "Simulated send in flight",
+  success: "Simulated send succeeded",
+  error: "Simulated send failed. Activate to retry.",
+};
+
+const COMPACT_STATUS_LABELS: Record<SendButtonState, string> = {
+  idle: "Run the compact simulated action",
+  loading: "Compact action in flight",
+  success: "Compact action finished",
+  error: "Compact action failed. Activate to retry.",
+};
+
 /** Simulated async send: random delay, ~20% failure on "random". Demo only. */
 function fakeSend(mode: DemoMode): Promise<void> {
   const delay = 900 + Math.random() * 900;
@@ -37,6 +56,10 @@ export function SendButtonDemo() {
 
   const runDemo = async (mode: DemoMode) => {
     if (demoState === "loading" || demoState === "success") return;
+    // Unreachable in practice: the only pending timer is the success flash, and
+    // the guard above already returned for that state. Kept as a belt-and-braces
+    // clear so a future state can never leave a timer running behind it.
+    /* istanbul ignore next -- defensive */
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
       timerRef.current = null;
@@ -72,6 +95,7 @@ export function SendButtonDemo() {
 
   const runRegen = async () => {
     if (regenState === "loading" || regenState === "success") return;
+    /* istanbul ignore next -- defensive, see runDemo */
     if (regenTimerRef.current !== null) {
       window.clearTimeout(regenTimerRef.current);
       regenTimerRef.current = null;
@@ -115,6 +139,7 @@ export function SendButtonDemo() {
           state={demoState}
           type="button"
           onClick={() => runDemo("random")}
+          statusLabels={PRIMARY_STATUS_LABELS}
         />
         <button
           type="button"
@@ -159,6 +184,7 @@ export function SendButtonDemo() {
             loadingLabel="Working…"
             successLabel="Done"
             errorLabel="Retry"
+            statusLabels={COMPACT_STATUS_LABELS}
           />
           <p className="text-xs text-[#9aa1a6]">
             Independent simulated action reusing the button component.
