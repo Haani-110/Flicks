@@ -23,6 +23,17 @@ test("a visitor gets a streamed answer with its catalog results", async ({
   let posted: Record<string, unknown> | null = null;
 
   await page.route("**/api/chat", async (route) => {
+    // The page fetches a single-use token with GET before it may POST, exactly
+    // as production does — the mock has to speak both halves of the contract.
+    if (route.request().method() === "GET") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ token: "e2e-token", expiresInMs: 120_000 }),
+      });
+      return;
+    }
+
     posted = route.request().postDataJSON() as Record<string, unknown>;
     await route.fulfill({
       status: 200,
@@ -82,13 +93,22 @@ test("a visitor gets a streamed answer with its catalog results", async ({
 test("a failing assistant route tells the reader what happened", async ({
   page,
 }) => {
-  await page.route("**/api/chat", (route) =>
+  await page.route("**/api/chat", (route) => {
+    if (route.request().method() === "GET") {
+      // Token issuance still succeeds: this test is about the POST failing.
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ token: "e2e-token", expiresInMs: 120_000 }),
+      });
+      return;
+    }
     route.fulfill({
       status: 500,
       contentType: "application/json",
       body: JSON.stringify({ error: "AI is not configured." }),
-    }),
-  );
+    });
+  });
 
   await page.goto("/assistant");
 

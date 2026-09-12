@@ -18,7 +18,8 @@
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
     "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
-    "lint": "oxlint --deny-warnings ."
+    "lint": "oxlint --deny-warnings .",
+    "screenshots": "playwright test --config playwright.screenshots.config.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.101",

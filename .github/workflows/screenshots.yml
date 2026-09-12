@@ -1,0 +1,57 @@
+name: Screenshots
+
+# Re-captures docs/screenshots/ from the real app in CI's Chromium and commits
+# the result, so the pictures in the README are always pictures of the product
+# at some real commit — taken by a browser, not drawn by a hand.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshots-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    name: Capture and commit screenshots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture screenshots
+        run: npm run screenshots
+
+      - name: Commit the captures
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/screenshots
+          if git diff --cached --quiet; then
+            echo "Screenshots unchanged."
+          else
+            git commit -m "docs: refresh product screenshots (captured by CI Chromium)"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Upload captures as an artifact too
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: screenshots
+          path: docs/screenshots/
+          retention-days: 14

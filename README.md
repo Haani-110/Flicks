@@ -1,148 +1,377 @@
 # Flicks
 
-Flicks is a movie discovery application built with React, TypeScript, Vite, and an AI assistant powered by OpenRouter and the AI SDK.
+**Discover movies, save a watchlist, and ask an AI assistant to find your next
+favorite film — in a UI that behaves like a shipped product, not a demo.**
 
-## AI Movie Search Tool
+[![CI](https://github.com/Haani-110/Flicks/actions/workflows/ci.yml/badge.svg)](https://github.com/Haani-110/Flicks/actions/workflows/ci.yml)
+React 19 · TypeScript 5.9 · Vite 7 · Tailwind 4 · Vercel · OpenRouter (AI SDK v6) · React Three Fiber
 
-The Flicks AI assistant includes a server-side tool called `search_movies`.
+---
 
-The tool allows the AI assistant to search the Flicks movie catalog using optional keywords, genres, and runtime limits.
+## Live demo
 
-### Tool name
+| Environment | URL | Status |
+| --- | --- | --- |
+| Production (Vercel) | the project's production domain | deploys automatically from `main` via the GitHub integration |
+| Preview | every push / PR | Vercel preview deployments |
+| Local | `http://localhost:5173` | `npm run dev` |
 
-`search_movies`
+> **Honest status note (2026-09-12):** the Vercel project currently has
+> *Deployment Protection* enabled, so the hosted URL asks for a Vercel login
+> until the owner switches it off (Project → Settings → Deployment Protection
+> → Production → off). Everything below runs identically on your machine with
+> two commands; the AI assistant needs one environment variable (see
+> [Getting started](#getting-started)), and every other page works without it.
 
-### Tool schema
+## Overview
 
-The tool uses a typed Zod schema with the following parameters:
+Flicks is a movie-discovery single-page app with four surfaces:
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `query` | `string` | No | Keyword to search in movie titles or descriptions |
-| `genre` | `string` | No | Movie genre such as Action, Drama, Comedy, Sci-Fi, Adventure, Crime, or History |
-| `maxRuntime` | `number` | No | Maximum movie runtime in minutes |
+- **Browse** — a poster grid over a local, hand-written catalogue with genre
+  filters and search, each card a real link with a real poster image.
+- **Film detail** — backdrop, metadata, genres and a watchlist toggle.
+- **Watchlist** — saved films, persisted per device in `localStorage`.
+- **Assistant** — a streaming chat with an AI that has a *server-side tool*
+  (`search_movies`) over the same catalogue, so answers cite real titles with
+  real links instead of hallucinating a film library.
+- **Marquee** — an interactive 3D cinema facade (React Three Fiber) whose
+  poster wall, accent colour and bulb-letter board are driven by the same
+  catalogue and config store.
+- **Health** — a diagnostics page that probes the app's own `/api/health`.
 
-Example tool input:
+The catalogue is deliberately local and finite: it makes the AI tool
+deterministic and testable. Posters and backdrops are real TMDB image URLs.
 
-```json
-{
-  "query": "space",
-  "genre": "Sci-Fi",
-  "maxRuntime": 150
-}
+## Screenshots
 
-## Premiere marquee (3D)
+Captured from the running app by CI's Chromium
+([`e2e/capture/screenshots.spec.ts`](e2e/capture/screenshots.spec.ts),
+refreshed on demand by the **Screenshots** workflow and committed here — never
+drawn or mocked):
 
-`/marquee` is an interactive 3D cinema facade, built with React Three Fiber. It is the capstone's
-"what if the watchlist had a foyer" page: the poster wall is drawn from the app's own catalog.
-
-Run `npm run dev` and open `/marquee`, or `npm run dev -- --host` and reach it from a phone on the
-same network. Everything below was measured on this repository.
-
-**What you can do**
-
-- **Orbit and zoom** — one finger (or the mouse) orbits, two fingers pinch to zoom. Panning is off
-  on purpose, so a drag never steals the page scroll.
-- **Dress the marquee** — finish (chrome / gold / copper / matte), bulb colour, brightness, the
-  centerpiece on the pedestal (film reel / projector / film can), and an X-ray wireframe toggle.
-- **Spell anything** on the letter board. The board is a 5x7 bulb matrix with its own font; it
-  drops characters it cannot draw and says so, and tells you how many of the 47 bulb columns the
-  word uses.
-- **Feature a movie** from the catalog: the title goes on the board, the accent colour changes, and
-  the poster wall highlights it. Clicking a poster in the scene does the same thing.
-- **Drop in your own `.glb`** — it lands on the pedestal, auto-centred and scaled, with a status
-  line reporting meshes, materials, size and whether it is DRACO/meshopt compressed. DRACO and
-  meshopt decoders are imported only for files that use them.
-- **Pause the scene** or switch to the static poster at any time; the settings survive a reload.
-
-**How it is built**
-
-| Piece | Choice |
+| | |
 | --- | --- |
-| Renderer | `three` + `@react-three/fiber`, no component library |
-| Geometry | Procedural — facade, canopy, pedestal, reel/projector/film can and the bulb board are all built in code |
-| Lighting | Ambient + hemisphere + a shadow-casting key light, two coloured rims, and a studio environment baked at runtime from three's `RoomEnvironment` via `PMREMGenerator` (no HDR download) |
-| Reflections | The generated environment map, intensity per part |
-| Posters | Painted at runtime with the 2D canvas API from catalog data, uploaded as 256x384 textures |
-| Interaction | `OrbitControls` (imperative), pointer-tracked follow spot, scroll-driven world offset, bulb chase/threshold twinkle |
+| ![Home](docs/screenshots/home-desktop.png) | ![Assistant conversation](docs/screenshots/assistant-conversation-desktop.png) |
+| Home — hero, search and the poster grid | Assistant — streamed answer with its tool-call card |
+| ![Film detail](docs/screenshots/movie-detail-desktop.png) | ![Watchlist](docs/screenshots/watchlist-desktop.png) |
+| Film detail | Watchlist, persisted on the device |
+| ![Marquee](docs/screenshots/marquee-desktop.png) | ![Home on a phone](docs/screenshots/home-mobile.png) |
+| The 3D marquee stage | Home at 375 px |
 
-### Performance note (FE-10 lens)
+## Features
 
-**Bundle.** The scene is a lazy chunk. Measured with `npm run build:split`:
+- **Streaming assistant with tools.** Answers arrive token-by-token over the
+  AI SDK's UI-message stream; mid-stream the model can call `search_movies`
+  and the transcript renders the call, its filters and its results as cards
+  with links into the catalogue.
+- **Watchlist that survives reloads**, with counts surfaced in the nav
+  (visually, never inside the accessible name).
+- **States everywhere.** Loading skeletons, empty states with a way out,
+  error states with a retry, success flashes that return to idle — including
+  on the send button itself, which is a documented little state machine.
+- **3D marquee** with a configurator (finish, bulbs, brightness, centerpiece,
+  wireframe), a 5×7 bulb bitmap font that explains dropped characters,
+  `.glb` drop-in with a DRACO/meshopt inspector, quality tiers chosen from a
+  real device probe, and a static-poster fallback that always works.
+- **Accessibility as a feature:** one navigation landmark at every
+  breakpoint, a disclosure menu with Escape-and-return-focus, live regions
+  for chat and status, focus-visible rings, `prefers-reduced-motion` paths
+  through the hero, the marquee and every animation.
+- **Abuse protection around the AI** that never gets in a real reader's way
+  (see [Security](#security--abuse-protection)).
 
-| Chunk | Raw | gzip |
-| --- | ---: | ---: |
-| Initial app (`index-*.js`) + CSS | 587 kB | **174 kB** |
-| `marquee-viewport` (three + R3F + scene) | 946 kB | **254 kB** — only fetched when the stage reaches the viewport |
-| `GLTFLoader` | 46 kB | 14 kB — only when a file is dropped |
-| `DRACOLoader` + meshopt decoder | 34 kB | 10 kB — only for compressed models |
+## Tech stack
 
-The repo's default build is still the single-file one (`npm run build`): 3.37 MB / **940 kB gzip**
-for `index.html`. That is the capstone's drag-and-drop deploy, and it comes at a price now — with
-`inlineDynamicImports` there is no chunk to defer, so three.js *and* the DRACO wasm (as a base64
-data URL) ride along with the first paint for every visitor, including the ones who never open the
-marquee.
+| Layer | Choice | Why |
+| --- | --- | --- |
+| UI | React 19 + TypeScript (strict) | typed contracts end to end |
+| Build | Vite 7, Tailwind 4 | fast dev loop, zero-config CSS pipeline |
+| Routing | react-router 7 | lazy route chunks, one layout shell |
+| AI | AI SDK 6 + `@openrouter/ai-sdk-provider` | streaming, tools, provider-agnostic |
+| 3D | three + @react-three/fiber | the marquee, lazy-loaded |
+| Server | Vercel Functions (`api/*.ts`) | chat proxy + health probe, no server to run |
+| Tests | Vitest + Testing Library, Playwright | 352 component/API tests + browser flows |
+| Lint | oxlint | CI-gated, zero warnings |
 
-`npm run build:split` is the answer for this feature: **174 kB gzip** for the first paint, then
-254 kB gzip only if the stage actually reaches the viewport, 14 kB only if someone drops a model,
-and 10 kB only if that model is compressed. That is the build I would deploy.
+## Architecture
 
-**Model size: zero.** Nothing is downloaded to draw the marquee — no GLB, no HDR, no textures, no
-font. The letter board is a bitmap font in source, the posters are painted in the browser. The only
-network cost of the page is the chunk above.
+```
+                        browser (React SPA)
+   ┌──────────────────────────────────────────────────────────┐
+   │  /  /watchlist  /movie/:id  /assistant  /marquee  /health │
+   │        │                         │                       │
+   │        │ localStorage            │ useChat (AI SDK)      │
+   │        ▼                         │  GET /api/chat → token│
+   │   WatchlistContext               ▼  POST + token + caps  │
+   └──────────────────────────────┬───────────────────────────┘
+                                  │
+                    Vercel edge (headers, CSP, caching)
+                                  │
+              ┌───────────────────┴───────────────────┐
+              │ api/chat.ts                           │
+              │  method → token verify → payload caps │
+              │  → rate limit → stream with timeout   │
+              │        │                              │
+              │        ▼                              │
+              │  lib/flicks-tools.ts  search_movies   │
+              │        │            (catalogue tool)  │
+              │        ▼                              │
+              │  OpenRouter (server-side key only)    │
+              ├───────────────────────────────────────┤
+              │ api/health.ts — status/build/config   │
+              └───────────────────────────────────────┘
+```
 
-**Frame cost.** The board is the expensive part, and it is deliberately cheap:
+The model key lives **only** in the function's environment. The browser never
+sees it; it earns a signed, single-use token first, and the route enforces
+size and rate budgets before a single token is generated.
 
-- 245 bulbs for the default `FLICKS` sign (329 for a full 8-character word), and all of them are
-  three instanced meshes — approximately 33k triangles at full quality, 12k on the lite tier.
-- Per-bulb colour is written back at ~24 Hz, not 60: a light chase does not need every frame.
-- Device pixel ratio is capped at 1.75 (1.0 on lite), `antialias` and shadows are off on lite, and
-  the sphere tessellation drops from 10x6 to 6x4.
-- The render loop only runs while the stage is on screen **and** the tab is visible; scrolling past
-  it or pausing sets `frameloop="never"` instead of rendering frames nobody sees.
-- The canvas only mounts after `IntersectionObserver` says the stage is near the viewport — so the
-  chunk and the WebGL context are not created for a visitor who never scrolls to it.
-- The live readout on the canvas (fps / draw calls / triangles) is sampled inside the render loop,
-  so any device can be checked rather than guessed at.
+## Project structure
 
-**Responsibility.** The page renders a static SVG poster first — drawn from the same config, with
-the same bulb matrix and accent colour — and upgrades to the canvas only when the device can take
-it. `prefers-reduced-motion`, a missing WebGL context, data saver, ≤4 GB of memory or <4 logical
-cores all land on the poster or the lite tier, and the reason is shown next to it. There is always
-a button to try the 3D scene anyway, another to go back to the poster, and a scene that throws
-falls back to the poster instead of blanking the page. Everything the scene can do through mouse,
-touch or drag also exists as a real form control: labelled radios, checkboxes, sliders, buttons and
-a file input.
+```
+api/            Vercel functions: chat.ts (AI proxy), health.ts (probe) + tests
+lib/            server-side guards: rate-limit, chat-token, chat-abuse,
+                flicks-tools (the model's catalogue tool) + tests
+src/
+  components/   shell (Layout, SiteNav, SiteFooter), Seo, posters, chat UI,
+                SendButtonDemo, ShaderHero + a test per behaviour
+  context/      WatchlistContext (stable-value provider)
+  data/         movies.ts — the local catalogue
+  features/
+    marquee/    the 3D stage: scene graph, quality tiers, config store, glTF
+  lib/          chat-transport (token cache + request body builder)
+  pages/        Home, Watchlist, MovieDetail, Assistant, Marquee, HealthCheck,
+                NotFound + tests
+  test/         render helpers, fetch mocks, recorded stream fixtures
+e2e/            Playwright flows (primary, assistant, marquee)
+e2e/capture/    screenshot capture for this README
+docs/           TESTING.md, REGRESSION-BASELINE.md, audit evidence
+scripts/        make-og-image.mjs, make-sitemap.mjs, ci-summary.mjs
+```
 
-**What I would add with more time**
+## Getting started
 
-1. **A real compressed model as the default centerpiece** — generate the reel as a DRACO-compressed
-   `.glb` (with a meshopt variant) and ship it as the demo, so the compressed path is exercised on
-   first load rather than only by dropped files. The loaders and the inspector are already there.
-2. **Per-movie marquee presets** — save the finish, accent and sign text alongside the watchlist, so
-   a saved film remembers how it looked in the foyer.
-3. **Post-processing, gated by tier** — a single bloom pass would make the bulbs glow for real; it
-   belongs behind the full tier and a measured frame-time check before switching on.
-4. **Scene-graph tests** — `@react-three/test-renderer` can assert the tree and interactions without
-   a GPU, which would move the scene out of the coverage exclusion list.
-5. **A frame-time budget in CI** — record the fps readout during the Playwright run and fail if the
-   scene drops below a floor, so a regression in geometry or shaders is caught like any other.
-6. **WebGPU renderer path** with a WebGL fallback, once the browser support is boring.
+Requires Node 22+ and npm.
+
+```bash
+git clone https://github.com/Haani-110/Flicks.git
+cd Flicks
+npm install
+cp .env.example .env.local     # then paste an OpenRouter key for the assistant
+npm run dev                    # http://localhost:5173
+```
+
+Without a key every page except the assistant works; the assistant explains
+that AI is not configured instead of failing mysteriously.
+
+Other scripts:
+
+```bash
+npm test                # 352 component/API tests, jsdom, no network
+npm run test:coverage   # the same suite, enforcing coverage thresholds
+npm run test:e2e        # Playwright flows in real Chromium
+npm run screenshots     # refresh docs/screenshots/ from the running app
+npm run lint            # oxlint, warnings denied
+npm run typecheck       # tsc --noEmit, strict
+npm run build           # single-file build (drag-and-drop deploy)
+npm run build:split     # code-split build — the one Vercel runs
+npm run verify          # lint + typecheck + coverage + build
+```
+
+## Environment variables
+
+| Variable | Side | Required | Purpose |
+| --- | --- | --- | --- |
+| `OPENROUTER_API_KEY` | server | for the assistant | OpenRouter key; spent only by `api/chat.ts` |
+| `CHAT_TOKEN_SECRET` | server | no | explicit signing key for chat tokens; derived from the provider key when unset |
+| `VITE_HEALTH_CHECK_API_URL` | client | no | external URL for the health page to probe; empty means probe our own `/api/health` |
+
+Set server variables in Vercel → Project → Settings → Environment Variables.
+`.env*` files are gitignored; `.env.example` documents all three.
+
+## Production configuration
+
+- **Build:** Vercel runs `npm run build:split` (see `vercel.json`), so the
+  first paint is ~174 kB gzip and three.js only downloads if the marquee
+  approaches the viewport. The single-file `npm run build` remains for
+  drag-and-drop hosting.
+- **Headers:** CSP (`default-src 'self'`, TMDB images, gstatic fonts),
+  HSTS with preload, `nosniff`, `DENY` framing, referrer and permissions
+  policies; `no-store` on `/api/*`; immutable one-year caching on `/assets/*`
+  (hashed filenames).
+- **Routing:** SPA rewrite for everything except `/api/*`.
+- **Metadata:** favicon + social tags in `index.html`; canonical, `og:url`,
+  `og:image` and per-route titles are written at runtime by `<Seo />` from the
+  origin actually serving the page. `public/og.png` (the share card) is drawn
+  byte-for-byte by `scripts/make-og-image.mjs`; `sitemap.xml` is generated at
+  build time from `VERCEL_PROJECT_PRODUCTION_URL` and skipped where the origin
+  is unknown, so it can never name a domain the project does not serve.
+
+## Security & abuse protection
+
+The chat proxy is the only surface that spends money, so it is the only
+surface that is fortified — deliberately lightweight, no database:
+
+1. **Signed single-use tokens.** `GET /api/chat` issues an HMAC-signed token
+   (2-minute TTL, one consumption). `POST` without a valid, unseen token is
+   refused with `401`. A script that never loads the page cannot chat; a
+   reader never notices.
+2. **Rate limiting.** Fixed-window in-memory limiter per client with
+   `429` + `Retry-After` once the budget is spent.
+3. **Payload caps.** Message count, per-message bytes and total bytes are
+   bounded server-side; history is re-validated rather than trusted from the
+   client (`400` with a plain-language reason).
+4. **Stream protection.** Upstream timeout, abort propagation and a function
+   `maxDuration`, so a hung provider cannot hold a worker forever.
+5. **Transport hygiene.** CSP, HSTS, nosniff, no framing, no-store on APIs;
+   the key never leaves the server; `/api/health` reports only booleans.
+
+Known, accepted limits are listed under [Known limitations](#known-limitations).
+
+## Engineering decisions
+
+- **Redesign, don't rebuild.** Every original route, flow and test survived
+  this upgrade; the visual layer was replaced wholesale and the broken parts
+  (red CI, untested shader, un-rate-limited proxy, dead linter) were repaired
+  in place. `docs/REGRESSION-BASELINE.md` is the checklist that was run.
+- **Coverage as a ratchet.** Thresholds in `vite.config.ts` sit a few points
+  under what the suite holds (95.4% lines), so deleting tests fails CI, while
+  one new component does not.
+- **Tests query roles and names, never classes.** The suite survived a full
+  restyle without a single selector change — the contract is the accessible
+  UI.
+- **The marquee degrades on purpose.** A device probe picks a quality tier;
+  no WebGL, reduced motion, data-saver or weak hardware lands on a static SVG
+  poster drawn from the same config, with the reason shown and a button to
+  try 3D anyway.
+- **Generated assets over binary ones.** The share card and the sitemap are
+  scripts, so they cannot rot; the favicon is 5 lines of SVG.
+- **Honest telemetry.** `/api/health` and the health page report what is
+  true (build commit, provider configured) rather than a green theatre.
+
+## Accessibility
+
+- Landmarks: one `nav` ("Primary"), one `main`, labelled regions for chat and
+  diagnostics; skip-link in the layout.
+- Keyboard: disclosure menu closes on Escape and returns focus; chat submits
+  on Enter, rejects empty submits; every control is a real button/link/input
+  with a visible focus ring.
+- Screen readers: streaming answers live in a polite `log`; the send button
+  announces its state through its accessible name; the watchlist badge is
+  `aria-hidden` so link names stay stable; the shader hero and marquee expose
+  text alternatives and honour `prefers-reduced-motion`.
+- Contrast: the palette keeps body text ≥ 7:1 and UI text ≥ 4.5:1 on the
+  nocturne background.
+
+## Performance
+
+- Route-level code splitting; three.js, the AI client and the configurator
+  never ride in the first paint (`build:split`).
+- Posters: skeleton → fade-in, `loading="lazy"` below the fold, TMDB
+  preconnect; fonts preconnected and subset.
+- The shader hero and the marquee render loop pause off-screen and on hidden
+  tabs (`IntersectionObserver` + `visibilitychange`); bulb colours update at
+  ~24 Hz, not 60.
+- Watchlist context value is memoized, so saving a film no longer re-renders
+  every card in the grid.
+- No third-party analytics, no tag managers, no runtime CSS-in-JS.
 
 ## Testing
 
-The project ships a Vitest + React Testing Library suite for components, hooks and the AI route,
-and a Playwright flow test that walks the primary journey in a real browser. Both run on every
-push and a failing job blocks merging.
+Real commands, real results (2026-09-12, this branch):
 
-```bash
-npm test              # unit + component tests
-npm run test:coverage # with coverage thresholds
-npm run test:e2e      # Playwright: the watchlist flow, the assistant, the marquee
-npm run build         # single-file production build (the deployed one)
-npm run build:split   # code-split build, for deploying the 3D route lazily
-npm run verify        # typecheck + coverage + production build (what CI gates on)
+```console
+$ npm run lint        # oxlint --deny-warnings .
+Found 0 warnings and 0 errors.   (124 files, 116 rules)
+
+$ npm run typecheck   # tsc -p tsconfig.json --noEmit
+(exit 0)
+
+$ npm run test:coverage
+ Test Files  46 passed (46)
+      Tests  352 passed (352)
+Statements   93.46%   Branches  87.93%
+Functions    95.90%   Lines     95.41%   (thresholds 90/84/92/92)
+
+$ npm run build:split
+✓ built in …   (initial ≈174 kB gzip; marquee chunk lazy)
 ```
 
-See [docs/TESTING.md](docs/TESTING.md) for what is covered, how the AI route is mocked (no test
-ever calls OpenRouter), the role/label query policy, and the CI evidence.
+- **Component/API layer** — Vitest + Testing Library in jsdom: chat parts and
+  states, the send-button state machine, the nav disclosure's keyboard
+  contract, the scroller's follow-along rule, posters, the error boundary,
+  the route table, the shader hero against a fake GL context, and the chat
+  route itself with a mocked provider (no test ever calls OpenRouter).
+- **Server guards** — contract tests for the limiter, the token lifecycle
+  (issue/verify/expiry/replay), payload caps and every 4xx the route can
+  return.
+- **Browser layer** — Playwright: the watchlist flow, the assistant against a
+  recorded SSE fixture (token GET included), the marquee scene in real
+  Chromium; plus the screenshot capture above.
+- **CI** — every push runs lint → typecheck → coverage → build and the
+  Playwright suite; a single `CI green` job gates the branch. Coverage and
+  Playwright reports upload as artifacts.
+
+See [docs/TESTING.md](docs/TESTING.md) for the full coverage map and
+[docs/REGRESSION-BASELINE.md](docs/REGRESSION-BASELINE.md) for what must never
+regress.
+
+## Deployment
+
+1. Push to `main` (or open a PR): Vercel's GitHub integration builds with
+   `npm run build:split` and deploys a preview; merging deploys production.
+2. Set `OPENROUTER_API_KEY` in the Vercel project settings.
+3. Optional: turn off Deployment Protection for a public URL, and run the
+   **Screenshots** workflow after any major visual change to refresh the
+   pictures in this README.
+4. `npm run build` (single file) remains for hosts without Node: drop
+   `dist/index.html` anywhere static.
+
+## How AI tools built this — honestly
+
+This repository is an AI-assisted internship assignment, and the division of
+labour deserves precision rather than a shrug emoji:
+
+- **What the author directed:** the product's scope and identity (nocturne
+  palette, the marquee concept, "the assistant must cite the real catalogue"),
+  every acceptance criterion of this upgrade (non-destructive, production
+  grade, accessible), the review of each batch, and the decision to keep the
+  catalogue local and the abuse protection lightweight.
+- **What the AI agent wrote:** essentially all of the code in the commits on
+  the upgrade branch — the redesign, the server guards, the test suites, the
+  CI wiring, this README — in an iterative loop: write → run tests → read
+  failures → fix → re-run. The coverage surge, the lint cleanup and the
+  screenshot pipeline exist because the agent could run the suite hundreds of
+  times in a session.
+- **What the agent got wrong first (and the tests caught):** duplicate
+  accessible names on the demo buttons, a token check that counted its own
+  handshake as traffic, an effect that captured a prop it claimed to ignore,
+  a canonical URL pointing at a domain the project does not own. Each is now
+  a regression test with a comment explaining the trap.
+- **What no AI did:** fabricate results. Every number above is a command
+  output; every screenshot is CI's Chromium; where something could not be
+  verified in this environment (a public production URL, a Lighthouse trace),
+  the README says so instead of inventing one.
+
+## Known limitations
+
+- **Catalogue is static.** Nine hand-written films; no TMDB API calls, no
+  admin, no pagination. By design — it keeps the AI tool deterministic.
+- **Watchlist is per-device.** `localStorage`, no accounts, no sync.
+- **Rate limiter and token store are in-memory.** A Vercel cold start resets
+  them and a replayed token would be accepted by a *different* instance.
+  Accepted trade for zero infrastructure; the payload caps and the provider's
+  own spend limits are the backstop. A platform-level WAF rule is the upgrade
+  path if traffic ever warrants it.
+- **SPA SEO.** Canonical/OG tags are runtime-set, so crawlers that skip
+  JavaScript see only the static half of the social tags. Server-side
+  rendering would fix it and would change the whole architecture; not taken.
+- **Deployment Protection** currently gates the hosted URL (see the note at
+  the top). The app itself is unaffected.
+- **No Lighthouse trace in CI.** The sandbox this upgrade ran in could not
+  install browsers; bundle sizes above are Vite's own build report, measured
+  locally, and the Playwright suite runs in CI where Chromium exists.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

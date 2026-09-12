@@ -5,7 +5,9 @@ The suite has two layers, both wired into CI:
 | Layer | Tool | Where it runs | Command |
 | --- | --- | --- | --- |
 | Components, hooks, pages, `api/` route | Vitest + React Testing Library (jsdom) | Node, no browser | `npm test` |
-| Primary user flow | Playwright (Chromium) | Real browser against the Vite dev server | `npm run test:e2e` |
+| Primary user flows | Playwright (Chromium) | Real browser against the Vite dev server | `npm run test:e2e` |
+| Static analysis | oxlint (`--deny-warnings`) | Node | `npm run lint` |
+| README screenshots | Playwright capture config | Real browser, recorded fixtures | `npm run screenshots` |
 
 ```bash
 npm test              # run the unit/component suite once
@@ -18,7 +20,7 @@ npm run verify        # typecheck + coverage + production build, what CI gates o
 
 ## What is covered
 
-`218 tests across 32 files` at the time of writing.
+`352 tests across 46 files` at the time of writing (2026-09-12).
 
 - **Chat message renderer** (`src/components/chat/ChatMessage.test.tsx`) — every part type the UI
   knows about (text, reasoning, tool call, source, file, data) plus the assistant in
@@ -70,7 +72,9 @@ No test ever talks to OpenRouter. Three independent mechanisms:
    with the AI SDK's `MockLanguageModelV3`, and calls the route handler directly. The real
    validation, tool execution, and stream encoding run.
 3. **Playwright** — specs intercept `**/api/chat` with `buildChatStreamSse()`
-   (`src/test/fixtures/chat-stream.ts`) and abort `**/openrouter.ai/**`.
+   (`src/test/fixtures/chat-stream.ts`) and abort `**/openrouter.ai/**`. The mock speaks both
+   halves of the production contract: `GET` returns a single-use token, `POST` returns the
+   recorded stream — so the client's token handshake is exercised for real.
 
 Streams in tests are built with the same encoder helpers the SDK expects
 (`src/test/ui-message-stream.ts`); `src/test/ui-message-stream.test.ts` parses the fixtures with
@@ -82,11 +86,12 @@ UI message protocol fails in one place instead of mysteriously breaking the chat
 `vite.config.ts` fails the run below these thresholds (statements / branches / functions / lines):
 
 ```
-72 / 74 / 70 / 76
+90 / 84 / 92 / 92
 ```
 
-They sit under today's numbers (85.17 / 82.35 / 86.02 / 87.68), so deleting tests fails CI while
-ordinary work does not. Coverage is measured on `src/**` only — `api/` and `lib/` have their own
+They sit under today's numbers (93.46 / 87.93 / 95.90 / 95.41), so deleting tests fails CI while
+ordinary work does not. The ratchet has moved twice: it started at 72/74/70/76 when the suite held
+85/82/86/88, and each raise was a commit of its own. Coverage is measured on `src/**` only — `api/` and `lib/` have their own
 contract tests and would otherwise skew the percentage.
 
 Two files are excluded because they cannot run in jsdom at all: `marquee-viewport.tsx` (the canvas
@@ -99,12 +104,16 @@ tested in this suite (those files sit at 89–100%).
 
 `.github/workflows/ci.yml` runs on every push (and PRs to `main`):
 
-- **Unit & component tests** — `npm ci`, `npm run typecheck`, `npm run test:coverage`,
-  uploads the `coverage` artifact, then `npm run build`.
+- **Unit & component tests** — `npm ci`, `npm run lint`, `npm run typecheck`,
+  `npm run test:coverage`, uploads the `coverage` artifact, then `npm run build`.
 - **End-to-end tests** — `npm ci`, `npx playwright install --with-deps chromium`,
   `npm run test:e2e`, uploads the `playwright-report` artifact (report and traces on failure).
 - **CI green** — a gate job that needs both and fails if either did. Require *only* this check in
   branch protection: it is the single status that means "all tests passed".
+
+A separate, manual **Screenshots** workflow (`.github/workflows/screenshots.yml`) captures
+`docs/screenshots/` with the same Chromium and commits the result, so the README's pictures are
+always taken from the product at a real commit.
 
 The unit job also publishes the per-file test totals and the coverage summary onto the run page
 (`scripts/ci-summary.mjs`), so a green run states what it verified instead of hiding it in a log.
