@@ -57,6 +57,20 @@ function sentMessages(request: RecordedChatRequest | undefined): SentMessage[] {
   return (request?.body?.messages ?? []) as SentMessage[];
 }
 
+/**
+ * How many times the app actually posted a conversation.
+ *
+ * Counted from the fetch calls rather than the mock's total, because the
+ * transport also makes one `GET /api/chat` to collect its single-use request
+ * token (see src/lib/chat-transport.ts). The point of the assertion is that a
+ * message is never sent twice — that survives the extra round trip.
+ */
+function postCount(fetchMock: ReturnType<typeof mockChatRoute>["fetchMock"]): number {
+  return fetchMock.mock.calls.filter(
+    ([, init]) => (init?.method ?? "GET").toUpperCase() === "POST",
+  ).length;
+}
+
 describe("Assistant", () => {
   it("shows starter suggestions and posts the chosen one as UIMessage parts", async () => {
     const user = userEvent.setup();
@@ -76,7 +90,7 @@ describe("Assistant", () => {
 
     await waitFor(() => expect(requests).toHaveLength(1));
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(postCount(fetchMock)).toBe(1);
     expect(requests[0].url).toBe("/api/chat");
     expect(sentMessages(requests[0])).toEqual([
       {

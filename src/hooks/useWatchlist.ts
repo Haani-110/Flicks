@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STORAGE_KEY = "flicks-watchlist";
 
@@ -30,5 +30,8 @@ export function useWatchlist() {
     setIds((prev) => prev.filter((id) => id !== movieId));
   }, []);
 
-  return { ids, toggle, remove };
+  // A stable object identity: WatchlistProvider puts this straight into the
+  // context, so a re-render that does not change `ids` no longer invalidates
+  // the memo and re-renders every card in the grid.
+  return useMemo(() => ({ ids, toggle, remove }), [ids, toggle, remove]);
 }

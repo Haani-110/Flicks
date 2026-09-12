@@ -314,31 +314,55 @@ export function ShaderHero({ children }: { children: ReactNode }) {
       targetY = Math.max(0, Math.min(y * dpr, h));
     };
 
-    window.addEventListener("mousemove", onMouseMove, { passive: true });
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
+    // Scoped to the hero: a pointer moving anywhere else on the page has
+    // nothing to do with this light.
+    container.addEventListener("mousemove", onMouseMove, { passive: true });
+    container.addEventListener("touchmove", onTouchMove, { passive: true });
 
     let raf = 0;
     let start = performance.now();
-    let paused = document.hidden;
+    // Two independent reasons not to draw: the tab is hidden, or the hero has
+    // been scrolled out of the page. Either one parks the loop.
+    let hidden = document.hidden;
+    let offscreen = false;
+
+    const paused = () => hidden || offscreen;
+
+    const startLoop = () => {
+      // Resume from where the clock left off so time doesn't jump.
+      start = performance.now() - (lastT * 1000);
+      if (!reduced && !paused()) tick();
+    };
 
     const onVis = () => {
-      paused = document.hidden;
-      if (!paused) {
-        // reset start so time doesn't jump after tab was hidden
-        start = performance.now() - (lastT * 1000);
-        if (!reduced) tick();
-      } else {
-        cancelAnimationFrame(raf);
-      }
+      hidden = document.hidden;
+      if (!paused()) startLoop();
+      else cancelAnimationFrame(raf);
     };
     document.addEventListener("visibilitychange", onVis);
+
+    // The marquee already does this; the hero is the other GPU consumer, and
+    // without it a reader who scrolls down to the grid keeps paying for a
+    // full-bleed fbm shader at up to 2560x1440 that nobody can see.
+    let io: IntersectionObserver | undefined;
+    if (typeof IntersectionObserver === "function") {
+      io = new IntersectionObserver(
+        (entries) => {
+          offscreen = !entries.some((entry) => entry.isIntersecting);
+          if (offscreen) cancelAnimationFrame(raf);
+          else startLoop();
+        },
+        { threshold: 0 },
+      );
+      io.observe(container);
+    }
 
     let lastT = 0;
     let mx = -1;
     let my = -1;
 
     const tick = () => {
-      if (paused || reduced) return;
+      if (paused() || reduced) return;
       const now = performance.now();
       const t = (now - start) / 1000;
       lastT = t;
@@ -364,10 +388,10 @@ export function ShaderHero({ children }: { children: ReactNode }) {
       mouseX = hasMouse ? mx : -1;
       mouseY = hasMouse ? my : -1;
 
+      // u_resolution is written by resize() — the drawing buffer only changes
+      // size there, so re-uploading it every frame was wasted work.
       gl.uniform1f(uTime, t);
       gl.uniform2f(uMouse, mouseX, mouseY);
-      // u_resolution already set on resize, but keep in sync if dpr changed mid-frame
-      gl.uniform2f(uRes, w, h);
 
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       raf = requestAnimationFrame(tick);
@@ -384,10 +408,11 @@ export function ShaderHero({ children }: { children: ReactNode }) {
     return () => {
       cancelAnimationFrame(raf);
       document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("touchmove", onTouchMove);
+      container.removeEventListener("mousemove", onMouseMove);
+      container.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("resize", resize);
       ro.disconnect();
+      io?.disconnect();
       gl.deleteBuffer(buf);
       gl.deleteProgram(program);
     };
@@ -408,6 +433,7 @@ export function ShaderHero({ children }: { children: ReactNode }) {
             "radial-gradient(90% 75% at 18% 50%, rgba(71,56,147,0.16) 0%, transparent 62%)," +
             "linear-gradient(180deg, #0a0f13 0%, #0d1419 45%, #0a0f13 100%)",
         }}
+        role="img"
         aria-label="Flicks hero — cinematic night, static for reduced motion"
       >
         {/* same vignette as shader fallback */}

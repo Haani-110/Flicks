@@ -15,6 +15,9 @@ type Filter = { label: string; value: string };
  * Tool inputs are streamed incrementally, so every field is optional and may
  * still be partially written when this runs.
  */
+// A pure parser that belongs next to the card that renders its output, and
+// has its own tests.
+// eslint-disable-next-line react/only-export-components
 export function filtersFromInput(input: unknown): Filter[] {
   if (!input || typeof input !== "object") return [];
 

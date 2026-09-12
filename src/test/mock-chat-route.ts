@@ -41,6 +41,17 @@ export function mockChatRoute(replies: ChatRouteReply | ChatRouteReply[]): ChatR
           ? input.href
           : input.url;
 
+    // The transport asks `GET /api/chat` for a single-use request token before
+    // it posts (see src/lib/chat-transport.ts). Handing one back keeps the mock
+    // faithful to the route, and leaving it out of `requests` keeps that list
+    // meaning what it has always meant: the conversation calls the app made.
+    if ((init?.method ?? "GET").toUpperCase() === "GET") {
+      return new Response(
+        JSON.stringify({ token: "test-chat-token", expiresInMs: 120_000 }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+
     requests.push({ url, body: parseBody(init?.body) });
 
     // Repeat the last reply if the app asks again (e.g. after a retry).

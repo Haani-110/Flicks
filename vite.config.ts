@@ -85,13 +85,16 @@ export default defineConfig(({ mode }) => ({
         "src/features/marquee/marquee-viewport.tsx",
         "src/features/marquee/scene/**",
       ],
-      // Ratchet: a couple of points below the level the suite holds today, so
-      // dropping tests (or adding untested UI) fails CI.
+      // Ratchet. The suite measured 93.25% statements / 87.70% branches /
+      // 95.80% functions / 95.29% lines over 44 files when these numbers were
+      // set; each threshold sits ~3 points below that so a single new component
+      // does not trip CI, but deleting a test file (or shipping a page with no
+      // tests) does. Raising coverage is expected to mean raising these too.
       thresholds: {
-        statements: 72,
-        branches: 74,
-        functions: 70,
-        lines: 76,
+        statements: 90,
+        branches: 84,
+        functions: 92,
+        lines: 92,
       },
     },
   },

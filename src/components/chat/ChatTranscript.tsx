@@ -3,6 +3,9 @@ import { ArrowDown, Bot } from "lucide-react";
 import type { ChatStatus, UIMessage } from "ai";
 import { ChatMessage } from "./ChatMessage";
 
+// The suggestions are part of this component's contract, and its tests import
+// them from here.
+// eslint-disable-next-line react/only-export-components
 export const CHAT_SUGGESTIONS = [
   "What movies are available?",
   "Which one is best rated?",

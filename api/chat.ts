@@ -14,13 +14,64 @@ import {
   OPENROUTER_MODEL_ID,
   buildSystemPrompt,
 } from "../lib/flicks-ai.js";
+import { RateLimiter, retryAfterSeconds } from "../lib/rate-limit.js";
+import {
+  CHAT_TOKEN_HEADER,
+  consumeChatToken,
+  issueChatToken,
+  resolveTokenSecret,
+  verifyChatToken,
+} from "../lib/chat-token.js";
+import {
+  checkMessageParts,
+  checkPayloadSize,
+  clientKey,
+} from "../lib/chat-abuse.js";
+
+/**
+ * Vercel kills the function at this many seconds. Exported so the platform
+ * picks it up, and used below (minus a margin) as the route's own deadline so
+ * the stream closes cleanly instead of being cut off mid-token.
+ */
+export const maxDuration = 60;
+
+/** How long a generation may run before the route aborts it itself. */
+const STREAM_TIMEOUT_MS = (maxDuration - 5) * 1000;
+
+/**
+ * Spending a model token is the expensive action, so it gets the tight budget.
+ * Issuing a token is nearly free, so it gets a looser one — it only has to stop
+ * someone hammering the issue endpoint itself.
+ */
+const chatLimiter = new RateLimiter({ limit: 12, windowMs: 60_000 });
+const tokenLimiter = new RateLimiter({ limit: 40, windowMs: 60_000 });
+
+/** Test hook: the in-memory buckets are per-instance, tests need a clean one. */
+export function resetChatGuards(): void {
+  chatLimiter.reset();
+  tokenLimiter.reset();
+}
+
+export function chatLimiterState(key: string) {
+  return chatLimiter.peek(key);
+}
+
+const NO_SNIFF = { "X-Content-Type-Options": "nosniff" } as const;
 
 export default async function handler(
   req: VercelRequest,
   res: VercelResponse,
 ) {
+  // Method handling comes first, exactly as it always has: a GET carrying a
+  // body is someone probing the route, not the browser asking for a token.
   if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
+    // A bare GET is the token-issuing endpoint the browser calls before it
+    // sends a message.
+    if (req.method === "GET" && req.body === undefined) {
+      return issueToken(req, res, process.env.OPENROUTER_API_KEY);
+    }
+
+    res.setHeader("Allow", "POST, GET");
     return res.status(405).json({
       error: "Method not allowed. Use POST.",
     });
@@ -34,6 +85,44 @@ export default async function handler(
     });
   }
 
+  const key = clientKey(req);
+
+  // --- abuse protection: budget per caller, then a signed token -------------
+  const budget = chatLimiter.hit(key);
+
+  res.setHeader("X-RateLimit-Limit", String(budget.limit));
+  res.setHeader("X-RateLimit-Remaining", String(budget.remaining));
+
+  if (!budget.allowed) {
+    res.setHeader("Retry-After", String(retryAfterSeconds(budget)));
+    return res.status(429).json({
+      error: "Too many requests. Please wait a minute before asking again.",
+    });
+  }
+
+  // Only enforced once a signing key exists, i.e. wherever a real provider key
+  // is configured. That keeps `npm test` and a keyless local run working while
+  // making the deployed route require a page load before it will spend tokens.
+  const secret = resolveTokenSecret();
+
+  if (secret) {
+    const presented = readHeader(req, CHAT_TOKEN_HEADER);
+    const verified = verifyChatToken(presented, secret);
+
+    if (!verified.ok) {
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(401).json({
+        ...NO_SNIFF,
+        error:
+          verified.reason === "replayed"
+            ? "That request token was already used. Reload the page and try again."
+            : "Your session needs refreshing. Reload the page and try again.",
+      });
+    }
+
+    consumeChatToken(verified.jti, verified.exp);
+  }
+
   let body: unknown;
 
   try {
@@ -45,6 +134,13 @@ export default async function handler(
     return res.status(400).json({
       error: "Invalid JSON body.",
     });
+  }
+
+  // --- abuse protection: bound the whole body, not just one message ---------
+  const size = checkPayloadSize(body);
+
+  if (!size.ok) {
+    return res.status(size.status).json({ error: size.error });
   }
 
   if (
@@ -118,7 +214,18 @@ export default async function handler(
     });
   }
 
+  // --- abuse protection: no invented tool calls in the supplied history -----
+  const parts = checkMessageParts(history);
+
+  if (!parts.ok) {
+    return res.status(parts.status).json({ error: parts.error });
+  }
+
   const controller = new AbortController();
+
+  // A generation that outlives the platform's own limit would be cut off
+  // mid-sentence, so the route ends it first and the client sees a clean stop.
+  const deadline = setTimeout(() => controller.abort(), STREAM_TIMEOUT_MS);
 
   const onClose = () => {
     controller.abort();
@@ -159,6 +266,8 @@ export default async function handler(
       headers: {
         "Cache-Control": "no-cache, no-transform",
         "X-Content-Type-Options": "nosniff",
+        "X-RateLimit-Limit": String(budget.limit),
+        "X-RateLimit-Remaining": String(budget.remaining),
       },
 
       // Never leak provider errors to the browser; the client shows this text.
@@ -187,6 +296,60 @@ export default async function handler(
       res.end();
     }
   } finally {
+    clearTimeout(deadline);
     req.off("close", onClose);
   }
+}
+
+/**
+ * `GET /api/chat` — hand the browser a single-use token.
+ *
+ * No key configured means no AI either, so this says so rather than issuing a
+ * token nothing would accept.
+ */
+function issueToken(
+  req: VercelRequest,
+  res: VercelResponse,
+  apiKey: string | undefined,
+) {
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+
+  if (!apiKey) {
+    return res.status(500).json({ error: "AI is not configured." });
+  }
+
+  const secret = resolveTokenSecret();
+
+  if (!secret) {
+    return res.status(500).json({ error: "AI is not configured." });
+  }
+
+  const key = clientKey(req);
+  const budget = tokenLimiter.hit(key);
+
+  res.setHeader("X-RateLimit-Limit", String(budget.limit));
+  res.setHeader("X-RateLimit-Remaining", String(budget.remaining));
+
+  if (!budget.allowed) {
+    res.setHeader("Retry-After", String(retryAfterSeconds(budget)));
+    return res.status(429).json({
+      error: "Too many requests. Please wait a minute before asking again.",
+    });
+  }
+
+  const issued = issueChatToken(secret);
+
+  return res.status(200).json({
+    token: issued.token,
+    expiresInMs: issued.expiresInMs,
+  });
+}
+
+function readHeader(req: VercelRequest, name: string): string | undefined {
+  const value = req.headers?.[name];
+
+  if (Array.isArray(value)) return value[0];
+
+  return typeof value === "string" ? value : undefined;
 }

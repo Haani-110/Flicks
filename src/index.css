@@ -1,20 +1,48 @@
 @import "tailwindcss";
 
 @theme {
-  /* Flicks palette */
+  /* ------------------------------------------------------------------
+     Flicks palette — cinema noir: charcoal room, amber marquee light.
+     Every value below also generates a Tailwind utility (bg-*, text-*,
+     border-*, ring-*), so new code can use tokens instead of hex.
+     ------------------------------------------------------------------ */
   --color-bg: #101315;
+  --color-bg-deep: #0a0d0f;
   --color-header: #14181a;
   --color-card: #1d2124;
   --color-surface: #1d2124;
+  --color-raised: #242a2e;
+  --color-steel: #2f3639;
   --color-border: #262b2f;
+  --color-border-soft: #1f2427;
   --color-text: #f3f1ec;
+  --color-haze: #d8dde0;
   --color-muted: #9aa1a6;
+  --color-dim: #7d858a;
   --color-accent: #e8a73e;
   --color-accent-hover: #f0b64d;
+  --color-accent-soft: #3a2f18;
+  --color-on-accent: #1a1a1a;
   --color-danger: #e05555;
+  --color-danger-hover: #c94a4a;
+  --color-success: #4bb47c;
+
+  /* Aliases used by the alternate layout components. */
+  --color-background: #101315;
+  --color-foreground: #f3f1ec;
+  --color-text-primary: #f3f1ec;
+  --color-text-secondary: #9aa1a6;
+  --color-primary: #e8a73e;
 
   /* Typography */
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Radii and elevation */
+  --radius-card: 0.875rem;
+  --shadow-raise: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-lift: 0 10px 30px -12px rgba(0, 0, 0, 0.65);
+  --shadow-glow: 0 0 0 1px rgba(232, 167, 62, 0.28), 0 12px 32px -14px rgba(232, 167, 62, 0.45);
 }
 
 @layer base {
@@ -32,15 +60,28 @@
     height: 100%;
   }
 
+  html {
+    /* Anchor jumps and "back to top" glide instead of snapping — disabled
+       below for readers who ask for reduced motion. */
+    scroll-behavior: smooth;
+    /* Safari iOS ignores overflow-x on body; html is the reliable place. */
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   body {
+    overflow-x: hidden;
     background-color: var(--color-bg);
     color: var(--color-text);
     font-family: var(--font-sans);
+    font-synthesis-weight: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Focus styles */
+  /* Focus styles — one visible ring everywhere, tuned for the dark palette. */
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
@@ -51,37 +92,308 @@
     color: inherit;
     text-decoration: none;
   }
+
+  /* Type scale: tighter tracking on display sizes, comfortable body rhythm. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: rgba(232, 167, 62, 0.32);
+    color: var(--color-text);
+  }
+
+  /* Scrollbars that belong to the room instead of the browser chrome. */
+  * {
+    scrollbar-color: var(--color-steel) transparent;
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-steel);
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: #3b4348;
+  }
+
+  /* Long unbroken strings (URLs, filenames) must never widen a layout. */
+  code,
+  pre {
+    font-family: var(--font-mono);
+  }
 }
 
 @layer components {
+  /* ------------------------------------------------------------------
+     Buttons — one base, four intents, three sizes.
+     Hierarchy: primary (amber, one per view) → secondary → ghost → danger.
+     ------------------------------------------------------------------ */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors;
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium;
+    border: 1px solid transparent;
+    transition:
+      background-color 150ms ease-out,
+      border-color 150ms ease-out,
+      color 150ms ease-out,
+      box-shadow 150ms ease-out,
+      transform 120ms ease-out;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .btn:disabled,
+  .btn[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: 0.55;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
   .btn-primary {
     background-color: var(--color-accent);
-    color: #1a1a1a;
+    color: var(--color-on-accent);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   }
-  .btn-primary:hover {
+  .btn-primary:hover:not(:disabled) {
     background-color: var(--color-accent-hover);
+    box-shadow: 0 6px 18px -8px rgba(232, 167, 62, 0.75);
   }
 
   .btn-secondary {
     background-color: var(--color-card);
     color: var(--color-text);
-    border: 1px solid var(--color-border);
+    border-color: var(--color-border);
   }
-  .btn-secondary:hover {
-    background-color: #242a2e;
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-raised);
+    border-color: var(--color-steel);
   }
 
+  .btn-ghost {
+    background-color: transparent;
+    color: var(--color-muted);
+    border-color: transparent;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+  }
+
+  .btn-danger {
+    background-color: var(--color-danger);
+    color: #fff;
+  }
+  .btn-danger:hover:not(:disabled) {
+    background-color: var(--color-danger-hover);
+  }
+  .btn-danger:focus-visible {
+    outline-color: var(--color-danger);
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .btn-lg {
+    @apply px-5 py-2.5 text-base;
+  }
+
+  /* ------------------------------------------------------------------
+     Surfaces
+     ------------------------------------------------------------------ */
   .card {
     background-color: var(--color-card);
     border: 1px solid var(--color-border);
-    border-radius: 0.75rem;
+    border-radius: var(--radius-card);
   }
 
-  /* ---------- Stateful send button (Flicks motion system) ---------- */
+  /* Cards that are links/buttons get a lift; inert cards do not move, so
+     nothing on the page shifts under the pointer. */
+  .card-interactive {
+    transition:
+      border-color 200ms ease-out,
+      box-shadow 200ms ease-out,
+      transform 200ms ease-out,
+      background-color 200ms ease-out;
+  }
+  .card-interactive:hover {
+    border-color: var(--color-steel);
+    box-shadow: var(--shadow-lift);
+    transform: translateY(-2px);
+  }
+
+  .panel {
+    background-color: var(--color-header);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium;
+    background-color: var(--color-raised);
+    color: var(--color-muted);
+    border: 1px solid transparent;
+  }
+
+  .chip-accent {
+    background-color: rgba(232, 167, 62, 0.14);
+    color: var(--color-accent);
+    border-color: rgba(232, 167, 62, 0.28);
+  }
+
+  .chip-danger {
+    background-color: rgba(224, 85, 85, 0.14);
+    color: #ffc9c9;
+    border-color: rgba(224, 85, 85, 0.35);
+  }
+
+  /* The small uppercase kicker above every page title. */
+  .eyebrow {
+    @apply text-xs font-semibold uppercase;
+    color: var(--color-accent);
+    letter-spacing: 0.14em;
+  }
+
+  /* ------------------------------------------------------------------
+     Forms
+     ------------------------------------------------------------------ */
+  .field {
+    @apply w-full rounded-md px-3 py-2 text-sm;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    transition:
+      border-color 150ms ease-out,
+      box-shadow 150ms ease-out;
+  }
+  .field::placeholder {
+    color: color-mix(in oklab, var(--color-muted) 75%, transparent);
+  }
+  .field:hover:not(:disabled) {
+    border-color: var(--color-steel);
+  }
+  .field:focus-visible {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(232, 167, 62, 0.22);
+  }
+  .field:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .field[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+  .field[aria-invalid="true"]:focus-visible {
+    box-shadow: 0 0 0 3px rgba(224, 85, 85, 0.22);
+  }
+
+  .label {
+    @apply text-xs font-medium;
+    color: var(--color-muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ------------------------------------------------------------------
+     Feedback states
+     ------------------------------------------------------------------ */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: var(--color-raised);
+    border-radius: 0.375rem;
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 45%,
+      rgba(255, 255, 255, 0.1) 55%,
+      transparent 100%
+    );
+    animation: skeleton-sweep 1.6s ease-in-out infinite;
+  }
+
+  .alert {
+    @apply rounded-md px-4 py-3 text-sm;
+    border: 1px solid rgba(224, 85, 85, 0.4);
+    background-color: rgba(224, 85, 85, 0.1);
+    color: var(--color-text);
+  }
+
+  .alert-info {
+    border-color: var(--color-border);
+    background-color: var(--color-header);
+    color: var(--color-muted);
+  }
+
+  /* ------------------------------------------------------------------
+     Page rhythm — one place to change spacing, every page follows.
+     ------------------------------------------------------------------ */
+  .page {
+    @apply space-y-10 sm:space-y-12;
+  }
+
+  .page-header {
+    @apply space-y-3;
+  }
+
+  .section {
+    @apply space-y-5;
+  }
+
+  .shell {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Poster grid: 2 up on a phone, 5 up on a wide desktop, never overflowing. */
+  .poster-grid {
+    @apply grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-4 xl:grid-cols-5;
+  }
+
+  /* Route/lazy-chunk transition. Transform + opacity only, so it never
+     triggers layout and never causes a shift. */
+  .rise-in {
+    animation: rise-in 260ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+  }
+
+  .fade-in {
+    animation: fade-in 200ms ease-out both;
+  }
+
+  /* ------------------------------------------------------------------
+     Stateful send button (Flicks motion system) — unchanged.
+     ------------------------------------------------------------------ */
   .send-btn {
     position: relative;
     display: inline-flex;
@@ -247,7 +559,62 @@
     }
   }
 
+  @keyframes skeleton-sweep {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* One place turns motion off for readers who ask: every animation above,
+     plus the smooth scroll and the poster hover lift. */
   @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    .btn,
+    .card-interactive,
+    .field,
+    .chip {
+      transition-duration: 1ms;
+    }
+
+    .btn:active:not(:disabled),
+    .card-interactive:hover {
+      transform: none;
+    }
+
+    .rise-in,
+    .fade-in {
+      animation: none;
+    }
+
+    .skeleton::after {
+      animation: none;
+      transform: none;
+      background-image: none;
+    }
+
     .send-btn {
       transition:
         background-color 1ms linear,

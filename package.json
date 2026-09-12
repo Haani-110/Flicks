@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "sitemap": "node scripts/make-sitemap.mjs",
+    "prebuild": "node scripts/make-sitemap.mjs",
     "build": "vite build",
+    "prebuild:split": "node scripts/make-sitemap.mjs",
     "build:split": "vite build --mode split",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -14,7 +17,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium",
-    "verify": "npm run typecheck && npm run test:coverage && npm run build"
+    "verify": "npm run lint && npm run typecheck && npm run test:coverage && npm run build",
+    "lint": "oxlint --deny-warnings .",
+    "screenshots": "playwright test --config playwright.screenshots.config.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.101",
@@ -44,6 +49,7 @@
     "@vitejs/plugin-react": "5.1.1",
     "@vitest/coverage-v8": "^5.0.0",
     "jsdom": "^30.0.1",
+    "oxlint": "^1.82.0",
     "tailwindcss": "4.1.17",
     "typescript": "5.9.3",
     "vite": "7.3.2",

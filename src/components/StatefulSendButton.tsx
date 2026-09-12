@@ -17,9 +17,20 @@ type StatefulSendButtonProps = {
   loadingLabel?: string;
   successLabel?: string;
   errorLabel?: string;
+  /**
+   * Per-state accessible names. The defaults describe *sending a message*,
+   * which is right for the composer. Anywhere the same button drives a
+   * different action, pass these — otherwise two unrelated controls on one
+   * page announce themselves identically, which is exactly the ambiguity a
+   * screen-reader user cannot see away.
+   */
+  statusLabels?: Partial<Record<SendButtonState, string>>;
 };
 
-const SR_STATUS: Record<SendButtonState, string> = {
+// The default status names are exported so demos and tests can extend, not
+// restate, them.
+// eslint-disable-next-line react/only-export-components
+export const SR_STATUS: Record<SendButtonState, string> = {
   idle: "Send message",
   loading: "Sending message",
   success: "Message sent",
@@ -42,6 +53,7 @@ export function StatefulSendButton({
   loadingLabel = "Sending…",
   successLabel = "Sent",
   errorLabel = "Retry",
+  statusLabels,
 }: StatefulSendButtonProps) {
   // Guarantee no duplicate submissions even if a parent forgets to disable.
   // The success flash stays clickable: in a chat, the next message comes
@@ -55,7 +67,7 @@ export function StatefulSendButton({
       onClick={onClick}
       data-state={state}
       aria-busy={state === "loading"}
-      aria-label={SR_STATUS[state]}
+      aria-label={statusLabels?.[state] ?? SR_STATUS[state]}
       className={cn("send-btn", size === "sm" && "send-btn-sm", className)}
     >
       <span className="send-btn-stack" aria-hidden="true">

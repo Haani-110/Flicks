@@ -47,10 +47,6 @@ export const searchMoviesTool = tool({
   }),
 
   execute: async ({ query, genre, maxRuntime }) => {
-    // Small delay makes the tool lifecycle visible during development.
-    // Remove this delay later if desired.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     const normalizedQuery = query?.trim().toLowerCase();
     const normalizedGenre = genre?.trim().toLowerCase();
 

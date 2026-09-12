@@ -9,7 +9,14 @@ type Todo = {
 
 type Status = "idle" | "loading" | "success" | "error";
 
-const DEFAULT_URL = "https://jsonplaceholder.typicode.com/todos/1";
+/**
+ * Where the check points when no override is configured: our own probe, not a
+ * stranger's. `GET /api/health` is first-party, spends nothing, and tells the
+ * page which build is serving — so a green badge here means *this* deployment
+ * is answering. Set VITE_HEALTH_CHECK_API_URL to keep probing an external
+ * dependency instead; the override still wins.
+ */
+const DEFAULT_URL = "/api/health";
 
 function getHealthUrl(): string {
   const envUrl =
@@ -47,6 +54,8 @@ export function HealthCheck() {
   }, []);
 
   useEffect(() => {
+    // Kicks off the probe; the state updates land as the response arrives.
+    // eslint-disable-next-line react/set-state-in-effect
     fetchHealth();
   }, [fetchHealth]);
 
@@ -60,7 +69,10 @@ export function HealthCheck() {
           Health Check
         </h1>
         <p className="max-w-xl text-sm text-[#9aa1a6] sm:text-base">
-          Verifies the app can reach its external API endpoint.
+          Verifies the app can reach its API endpoint — our own
+          {" "}<code className="font-mono text-xs">/api/health</code> by default, or
+          any external URL set via{" "}
+          <code className="font-mono text-xs">VITE_HEALTH_CHECK_API_URL</code>.
         </p>
       </header>
 

@@ -60,7 +60,10 @@ export function ConfigPanel({
 
   // The panel owns the raw text so a dropped character can be explained before
   // it disappears; the config keeps the normalised version.
+  // The raw draft follows external normalisation (the "surprise me" and
+  // bulb-column paths rewrite the sign text from outside the panel).
   useEffect(() => {
+    // eslint-disable-next-line react/set-state-in-effect
     setDraft(config.signText);
   }, [config.signText]);
 
