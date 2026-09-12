@@ -1,0 +1,3 @@
+# Flicks — Capstone Project Brief
+
+Flicks is a small movie discovery application designed to help users discover films, save movies to a personal watchlist, and get useful AI-assisted recommendations without leaving the application. The AI assistant can search Flicks' movie catalogue and return relevant movies based on what the user asks for, making the AI capability part of the actual discovery experience rather than a standalone chatbot. I chose this idea because it builds naturally on the frontend work I developed throughout the internship while giving me a practical way to demonstrate accessibility, AI integration, testing, resilience, performance, and production deployment in one complete application.
