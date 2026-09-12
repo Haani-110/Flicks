@@ -10,6 +10,9 @@ dist/
 .DS_Store
 *.log
 
+# generated at build time from the deployment origin (scripts/make-sitemap.mjs)
+public/sitemap.xml
+
 # test artifacts
 coverage/
 playwright-report/

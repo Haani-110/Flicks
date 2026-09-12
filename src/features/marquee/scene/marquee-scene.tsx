@@ -44,7 +44,6 @@ function StudioEnvironment({ intensity }: { intensity: number }) {
     const target = pmrem.fromScene(room, 0.04);
 
     scene.environment = target.texture;
-    scene.environmentIntensity = intensity;
 
     room.dispose();
 

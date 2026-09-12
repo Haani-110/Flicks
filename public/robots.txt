@@ -1,0 +1,7 @@
+# Flicks — crawl policy.
+#
+# The whole SPA is public content; the only paths a crawler should stay off are
+# the API functions, which answer JSON and spend model credit on POST.
+User-agent: *
+Allow: /
+Disallow: /api/

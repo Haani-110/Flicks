@@ -38,6 +38,9 @@ export function MarqueeExperience({ movies = catalog }: MarqueeExperienceProps) 
   // Probing creates a WebGL context, so it happens after paint, once. Until it
   // answers, the poster is on screen — the cheapest possible first frame.
   useEffect(() => {
+    // The device probe reads GPU/canvas capabilities that do not exist during
+    // the first render, so the decision can only land in an effect.
+    // eslint-disable-next-line react/set-state-in-effect
     setDecision(decideQuality(probeDevice()));
   }, []);
 
