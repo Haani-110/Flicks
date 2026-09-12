@@ -6,6 +6,7 @@ import { Watchlist } from "@/pages/Watchlist";
 import { MovieDetail } from "@/pages/MovieDetail";
 import { HealthCheck } from "@/pages/HealthCheck";
 import { Assistant } from "@/pages/Assistant";
+import { Marquee } from "@/pages/Marquee";
 import { NotFound } from "@/pages/NotFound";
 import { AppErrorBoundary } from "@/error";
 
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/movie/:id" element={<MovieDetail />} />
           <Route path="/health" element={<HealthCheck />} />
           <Route path="/assistant" element={<Assistant />} />
+          <Route path="/marquee" element={<Marquee />} />
           <Route path="*" element={<NotFound />} />
         </Route>
         </Routes>

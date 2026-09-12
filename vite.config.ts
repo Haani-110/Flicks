@@ -13,13 +13,26 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
-    // Bundling the app into a single HTML file is a production concern only.
-    ...(mode === "test" ? [] : [viteSingleFile()]),
+    // Bundling the app into a single HTML file is the default production build.
+    // `npm run build:split` turns that off so the 3D route's chunk can be
+    // fetched on demand instead of inlined into index.html.
+    ...(mode === "test" || mode === "split" ? [] : [viteSingleFile()]),
   ],
 
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+    },
+  },
+
+  server: {
+    // The dev server is reachable from the sandbox's preview proxy, which
+    // forwards to whatever host name the browser used.
+    allowedHosts: true,
+    watch: {
+      // Test and build output lands in the tree; reloading the page every time
+      // a coverage report is written helps nobody.
+      ignored: ["**/coverage/**", "**/dist/**", "**/playwright-report/**", "**/test-results/**"],
     },
   },
 
@@ -43,6 +56,13 @@ export default defineConfig(({ mode }) => ({
         "src/test/**",
         "src/vite-env.d.ts",
         "src/main.tsx",
+        // Needs a GPU, so it cannot run in jsdom: the canvas host and the
+        // three.js scene graph are covered end to end instead (e2e/marquee.spec.ts
+        // drives the real scene in Chromium). Everything they depend on — the
+        // font, the bulb layout, the scroll maths, the material presets, the
+        // tiers and the drop handling — is tested in this suite.
+        "src/features/marquee/marquee-viewport.tsx",
+        "src/features/marquee/scene/**",
       ],
       // Ratchet: a couple of points below the level the suite holds today, so
       // dropping tests (or adding untested UI) fails CI.

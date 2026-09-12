@@ -37,6 +37,54 @@ if (typeof window.matchMedia !== "function") {
   });
 }
 
+// jsdom implements neither IntersectionObserver nor ResizeObserver. Tests that
+// care about visibility replace these; the default reports "on screen" so
+// lazy-mounted UI behaves like it does in a browser.
+class TestIntersectionObserver implements IntersectionObserver {
+  readonly root = null;
+  readonly rootMargin = "";
+  readonly thresholds: readonly number[] = [];
+  private readonly callback: IntersectionObserverCallback;
+
+  constructor(callback: IntersectionObserverCallback) {
+    this.callback = callback;
+  }
+
+  observe(target: Element) {
+    this.callback(
+      [{ target, isIntersecting: true, intersectionRatio: 1 } as IntersectionObserverEntry],
+      this,
+    );
+  }
+  unobserve() {}
+  disconnect() {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+}
+
+class TestResizeObserver implements ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+if (!("IntersectionObserver" in globalThis)) {
+  Object.defineProperty(globalThis, "IntersectionObserver", {
+    configurable: true,
+    writable: true,
+    value: TestIntersectionObserver,
+  });
+}
+
+if (!("ResizeObserver" in globalThis)) {
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    configurable: true,
+    writable: true,
+    value: TestResizeObserver,
+  });
+}
+
 beforeEach(() => {
   // Tests must mock the AI route explicitly (see src/test/mock-chat-route.ts).
   // Anything else is a bug: this project's tests never touch the network.

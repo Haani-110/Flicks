@@ -13,7 +13,7 @@ describe("Layout", () => {
     );
 
     const nav = screen.getByRole("navigation");
-    for (const label of ["Home", "Watchlist", "Assistant", "Health"]) {
+    for (const label of ["Home", "Watchlist", "Assistant", "Health", "Marquee"]) {
       expect(within(nav).getByRole("link", { name: label })).toBeInTheDocument();
     }
 

@@ -18,7 +18,7 @@ npm run verify        # typecheck + coverage + production build, what CI gates o
 
 ## What is covered
 
-`98 tests across 18 files` at the time of writing (`docs/evidence/vitest-results.json`).
+`218 tests across 32 files` at the time of writing.
 
 - **Chat message renderer** (`src/components/chat/ChatMessage.test.tsx`) — every part type the UI
   knows about (text, reasoning, tool call, source, file, data) plus the assistant in
@@ -32,9 +32,13 @@ npm run verify        # typecheck + coverage + production build, what CI gates o
   surfacing as an in-stream error rather than a leaked stack trace.
 - **Pages and flows** — assistant chat (including sending, retry after error, watchlist actions),
   home, movie detail, watchlist, layout, health check.
+- **The 3D marquee** (`src/features/marquee/`) — the letter board's font and bulb layout, the
+  config store and its storage round-trip, the device/quality tier decisions, the glTF inspector,
+  the configurator form, the drop zone, the poster fallback and the whole experience's gating
+  (poster → canvas → pause → poster, and a scene that throws).
 - **One end-to-end flow** (`e2e/primary-flow.spec.ts`) — home → movie detail → add to watchlist →
   watchlist page → reload → remove, in a real browser. `e2e/assistant.spec.ts` walks the chat
-  against a mocked route.
+  against a mocked route, and `e2e/marquee.spec.ts` drives the real WebGL scene in Chromium.
 
 ## Query policy: roles and labels only
 
@@ -81,9 +85,15 @@ UI message protocol fails in one place instead of mysteriously breaking the chat
 72 / 74 / 70 / 76
 ```
 
-They sit a couple of points under today's numbers (76.29 / 78.77 / 75.43 / 79.84), so deleting
-tests fails CI while ordinary work does not. Coverage is measured on `src/**` only — `api/` and
-`lib/` have their own contract tests and would otherwise skew the percentage.
+They sit under today's numbers (85.17 / 82.35 / 86.02 / 87.68), so deleting tests fails CI while
+ordinary work does not. Coverage is measured on `src/**` only — `api/` and `lib/` have their own
+contract tests and would otherwise skew the percentage.
+
+Two files are excluded because they cannot run in jsdom at all: `marquee-viewport.tsx` (the canvas
+host) and `scene/**` (the three.js graph) need a GPU-backed WebGL context. They are covered by
+`e2e/marquee.spec.ts` instead, and everything they rely on — the font, the bulb layout, the scroll
+maths, the material presets, the quality tiers, the glTF inspection and the drop handling — is
+tested in this suite (those files sit at 89–100%).
 
 ## CI
 
