@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}", "lib/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "lib/**/*.test.ts", "api/**/*.test.ts"],
     // Playwright owns the end-to-end suite; Vitest owns component tests.
     exclude: ["e2e/**", "node_modules/**", "dist/**"],
     restoreMocks: true,
@@ -35,6 +35,8 @@ export default defineConfig(({ mode }) => ({
       provider: "v8",
       reporter: ["text-summary", "lcov"],
       reportsDirectory: "coverage",
+      // Component-level coverage for the app UI; api/ and lib/ are covered by
+      // their own contract tests (see api/chat.test.ts, lib/flicks-tools.test.ts).
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "src/**/*.test.{ts,tsx}",
