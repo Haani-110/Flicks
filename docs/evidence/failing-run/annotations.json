@@ -1,0 +1,12 @@
+[
+  {
+    "level": "notice",
+    "title": "Playwright Run Summary",
+    "message": "1 failed\n    [chromium] \u203a e2e/primary-flow.spec.ts:7:1 \u203a a visitor saves a movie to the watchlist and it survives a reload \n  2 passed (5.4s)"
+  },
+  {
+    "level": "failure",
+    "title": "[chromium]  e2e/primary-flow.spec.ts:7:1  a visitor saves a movie to the watchlist and it survives a reload",
+    "message": "1) [chromium] \u203a e2e/primary-flow.spec.ts:7:1 \u203a a visitor saves a movie to the watchlist and it survives a reload \n\n    Retry #1 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n    Error: locator.click: Error: strict mode violation: getByRole('link', { name: 'Dune: Part Two' }) resolved to 2 elements:\n        1) <a href=\"/movie/1\" data-discover=\"true\" class=\"block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8a73e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#101315]\">\u2026</a> aka getByRole('link', { name: 'Dune: Part Two poster' })\n        2) <a href=\"/movie/1\" data-discover=\"true\" class=\"block truncate text-sm font-medium text-[#f3f1ec] hover:text-[#e8a73e] transition-colors\">Dune: Part Two</a> aka getByRole('link', { name: 'Dune: Part Two', exact: true })\n\n    Call log:\n      - waiting for getByRole('link', { name: 'Dune: Part Two' })\n\n\n      14 |   ).toBeVisible();\n      15 |\n    > 16 |   await page.getByRole(\"link\", { name: \"Dune: Part Two\" }).click();\n         |                                                            ^\n      17 |\n      18 |   await expect(\n      19 |     page.getByRole(\"heading\", { level: 1, name: \"Dune: Part Two\" }),\n        at /home/runner/work/Flicks/Flicks/e2e/primary-flow.spec.ts:16:60"
+  }
+]

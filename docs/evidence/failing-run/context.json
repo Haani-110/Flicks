@@ -1,0 +1,11 @@
+{
+  "title": "Why CI went red \u2014 and the fix",
+  "tone": "red",
+  "lines": [
+    "Commit d18edb7 \u00b7 run 34690434940 \u00b7 End-to-end tests failed after 1 retry:",
+    "  getByRole('link', { name: 'Dune: Part Two' }) resolved to 2 elements \u2014 the poster link",
+    "  and the title link both match, so Playwright's strict mode aborts the click.",
+    "The gate job \"CI green\" reported failure, so the branch could not be merged.",
+    "Fix commit 150f563: match the link and button names exactly (exact: true). CI is green again."
+  ]
+}

@@ -30,3 +30,19 @@ Example tool input:
   "genre": "Sci-Fi",
   "maxRuntime": 150
 }
+
+## Testing
+
+The project ships a Vitest + React Testing Library suite for components, hooks and the AI route,
+and a Playwright flow test that walks the primary journey in a real browser. Both run on every
+push and a failing job blocks merging.
+
+```bash
+npm test              # unit + component tests
+npm run test:coverage # with coverage thresholds
+npm run test:e2e      # Playwright end-to-end flow
+npm run verify        # typecheck + coverage + production build (what CI gates on)
+```
+
+See [docs/TESTING.md](docs/TESTING.md) for what is covered, how the AI route is mocked (no test
+ever calls OpenRouter), the role/label query policy, and the CI evidence.

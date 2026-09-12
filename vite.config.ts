@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => ({
     unstubGlobals: true,
     coverage: {
       provider: "v8",
-      reporter: ["text-summary", "lcov"],
+      reporter: ["text-summary", "json-summary", "lcov"],
       reportsDirectory: "coverage",
       // Component-level coverage for the app UI; api/ and lib/ are covered by
       // their own contract tests (see api/chat.test.ts, lib/flicks-tools.test.ts).

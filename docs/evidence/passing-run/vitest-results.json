@@ -1,0 +1,159 @@
+{
+  "command": "npm run test:coverage",
+  "recorded": "2026-09-12T11:23:42Z",
+  "success": true,
+  "files": 18,
+  "tests": 98,
+  "passed": 98,
+  "failed": 0,
+  "coverage": {
+    "statements": {
+      "pct": 76.29,
+      "covered": 325,
+      "total": 426
+    },
+    "branches": {
+      "pct": 78.77,
+      "covered": 282,
+      "total": 358
+    },
+    "functions": {
+      "pct": 75.43,
+      "covered": 86,
+      "total": 114
+    },
+    "lines": {
+      "pct": 79.84,
+      "covered": 305,
+      "total": 382
+    }
+  },
+  "suites": [
+    {
+      "file": "api/chat.test.ts",
+      "status": "passed",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "lib/flicks-tools.test.ts",
+      "status": "passed",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "src/components/Layout.test.tsx",
+      "status": "passed",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "src/components/MovieCard.test.tsx",
+      "status": "passed",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "src/components/StatefulSendButton.test.tsx",
+      "status": "passed",
+      "tests": 8,
+      "passed": 8,
+      "failed": 0
+    },
+    {
+      "file": "src/components/chat/ChatComposer.test.tsx",
+      "status": "passed",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "file": "src/components/chat/ChatMessage.test.tsx",
+      "status": "passed",
+      "tests": 11,
+      "passed": 11,
+      "failed": 0
+    },
+    {
+      "file": "src/components/chat/ToolCallCard.test.tsx",
+      "status": "passed",
+      "tests": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "file": "src/lib/chat-contract.test.ts",
+      "status": "passed",
+      "tests": 6,
+      "passed": 6,
+      "failed": 0
+    },
+    {
+      "file": "src/lib/chat-errors.test.ts",
+      "status": "passed",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "file": "src/lib/chat-transport.test.ts",
+      "status": "passed",
+      "tests": 4,
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "file": "src/pages/Assistant.test.tsx",
+      "status": "passed",
+      "tests": 9,
+      "passed": 9,
+      "failed": 0
+    },
+    {
+      "file": "src/pages/HealthCheck.test.tsx",
+      "status": "passed",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "file": "src/pages/Home.test.tsx",
+      "status": "passed",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "src/pages/MovieDetail.test.tsx",
+      "status": "passed",
+      "tests": 5,
+      "passed": 5,
+      "failed": 0
+    },
+    {
+      "file": "src/pages/Watchlist.test.tsx",
+      "status": "passed",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "src/test/network-guard.test.ts",
+      "status": "passed",
+      "tests": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    {
+      "file": "src/test/ui-message-stream.test.ts",
+      "status": "passed",
+      "tests": 3,
+      "passed": 3,
+      "failed": 0
+    }
+  ]
+}

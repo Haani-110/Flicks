@@ -4,12 +4,6 @@ const PORT = 4174;
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 
 /**
- * Escape hatch for sandboxes that cannot download browsers from the Playwright
- * CDN (CI installs them normally and leaves this unset).
- */
-const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
-
-/**
  * End-to-end tests run against the real app in a real browser, on the Vite dev
  * server. The one network dependency (the AI route) is mocked per test, so the
  * suite never calls OpenRouter.
@@ -28,7 +22,6 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
-    launchOptions: executablePath ? { executablePath } : {},
   },
 
   projects: [
@@ -36,10 +29,7 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        launchOptions: {
-          ...(executablePath ? { executablePath } : {}),
-          args: ["--no-sandbox"],
-        },
+        launchOptions: { args: ["--no-sandbox"] },
       },
     },
   ],

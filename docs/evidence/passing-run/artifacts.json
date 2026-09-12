@@ -1,0 +1,12 @@
+[
+  {
+    "name": "coverage",
+    "size": "118 KB",
+    "digest": "sha256:5dcbfb76f5a28a901cda11dbcce51b4d838e2387c42bd4590ccbf7dd4375b880"
+  },
+  {
+    "name": "playwright-report",
+    "size": "194 KB",
+    "digest": "sha256:eb760271b6b1804e1fd025ef6f0dc16edf9053efd4c91769420caf041cb099d1"
+  }
+]
