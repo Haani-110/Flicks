@@ -9,3 +9,9 @@ dist/
 .idea/
 .DS_Store
 *.log
+
+# test artifacts
+coverage/
+playwright-report/
+test-results/
+blob-report/

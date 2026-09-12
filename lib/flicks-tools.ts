@@ -21,7 +21,7 @@ export const searchMoviesTool = tool({
   description:
     "Search the Flicks movie catalog. Use this when the user asks to find, recommend, filter, or compare movies based on title, genre, keywords, or runtime.",
 
-  parameters: z.object({
+  inputSchema: z.object({
     query: z
       .string()
       .optional()

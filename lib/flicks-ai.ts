@@ -1,4 +1,5 @@
 import { movies } from "../src/data/movies.js";
+import { CHAT_LIMITS } from "../src/lib/chat-contract.js";
 
 /**
  * Single source of truth for Flicks AI configuration.
@@ -17,15 +18,13 @@ export const GENERATION_SETTINGS = {
   maxOutputTokens: 800,
 } as const;
 
-/** Conversation / payload limits (applied server-side). */
-export const CHAT_LIMITS = {
-  /** Max messages kept from history (multi-turn window). */
-  maxHistoryMessages: 20,
-  /** Max characters accepted per message. */
-  maxMessageChars: 2000,
-  /** Max messages accepted per request. */
-  maxMessagesPerRequest: 30,
-} as const;
+/**
+ * Conversation / payload limits (applied server-side).
+ *
+ * Defined in src/lib/chat-contract.ts so the client composer validates against
+ * exactly the same numbers the route enforces.
+ */
+export { CHAT_LIMITS };
 
 /** Roles the chat API accepts from the client. */
 export const ALLOWED_ROLES = ["user", "assistant"] as const;

@@ -152,11 +152,19 @@ export default async function handler(
       abortSignal: controller.signal,
     });
 
-    // Send plain text to the existing frontend
-    result.pipeTextStreamToResponse(res, {
+    // Stream the AI SDK UI message protocol: the client renders text, tool
+    // calls and tool results as message parts. The response headers
+    // (text/event-stream + x-vercel-ai-ui-message-stream) come from the SDK.
+    await result.pipeUIMessageStreamToResponse(res, {
       headers: {
         "Cache-Control": "no-cache, no-transform",
         "X-Content-Type-Options": "nosniff",
+      },
+
+      // Never leak provider errors to the browser; the client shows this text.
+      onError: (error) => {
+        console.error("[chat] stream error", error);
+        return "AI request failed. Please try again.";
       },
     });
   } catch (error) {

@@ -44,7 +44,9 @@ export function StatefulSendButton({
   errorLabel = "Retry",
 }: StatefulSendButtonProps) {
   // Guarantee no duplicate submissions even if a parent forgets to disable.
-  const isDisabled = disabled || state === "loading" || state === "success";
+  // The success flash stays clickable: in a chat, the next message comes
+  // straight after the previous answer landed.
+  const isDisabled = disabled || state === "loading";
 
   return (
     <button
