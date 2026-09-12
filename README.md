@@ -46,7 +46,8 @@ deterministic and testable. Posters and backdrops are real TMDB image URLs.
 
 Captured from the running app by CI's Chromium
 ([`e2e/capture/screenshots.spec.ts`](e2e/capture/screenshots.spec.ts),
-refreshed on demand by the **Screenshots** workflow and committed here — never
+refreshed on demand by the **Screenshots** workflow (manual dispatch, or
+`git tag screenshots-<date> && git push --tags`) and committed here — never
 drawn or mocked):
 
 | | |

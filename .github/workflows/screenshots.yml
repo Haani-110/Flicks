@@ -5,6 +5,13 @@ name: Screenshots
 # at some real commit — taken by a browser, not drawn by a hand.
 on:
   workflow_dispatch:
+  # The integration token cannot create workflow_dispatch events, but it can
+  # push refs — so `git tag screenshots-<anything> && git push --tags` is the
+  # automation-friendly trigger. Tags match screenshots-* only; nothing else
+  # in the repo creates them.
+  create:
+    tags:
+      - "screenshots-*"
 
 permissions:
   contents: write
@@ -45,7 +52,10 @@ jobs:
             echo "Screenshots unchanged."
           else
             git commit -m "docs: refresh product screenshots (captured by CI Chromium)"
-            git push origin HEAD:${{ github.ref_name }}
+            # Tag-triggered runs sit on a detached HEAD; land on main.
+            TARGET="${GITHUB_REF_TYPE:-branch}"
+            if [ "$TARGET" = "tag" ]; then TARGET=main; else TARGET="${GITHUB_REF_NAME}"; fi
+            git push origin HEAD:"$TARGET"
           fi
 
       - name: Upload captures as an artifact too
