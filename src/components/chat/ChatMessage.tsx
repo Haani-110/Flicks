@@ -183,6 +183,7 @@ function Dot({ delay }: { delay: string }) {
     <span
       className="h-2 w-2 animate-bounce rounded-full bg-[#9aa1a6]"
       style={{ animationDelay: delay }}
+      aria-hidden="true"
     />
   );
 }

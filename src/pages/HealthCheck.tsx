@@ -76,18 +76,19 @@ export function HealthCheck() {
             <dt className="text-xs uppercase tracking-wide text-[#9aa1a6]">
               Status
             </dt>
-            <dd className="mt-1">
+            <dd className="mt-1" aria-live="polite" aria-atomic="true">
               <StatusBadge status={status} />
             </dd>
           </div>
         </dl>
 
-        <div className="mt-6">
+        <div className="mt-6" aria-live="polite" aria-atomic="false">
           {status === "loading" && (
-            <div className="space-y-2">
-              <div className="h-4 w-2/3 animate-pulse rounded bg-[#242a2e]" />
-              <div className="h-4 w-1/2 animate-pulse rounded bg-[#242a2e]" />
-              <div className="h-4 w-3/4 animate-pulse rounded bg-[#242a2e]" />
+            <div className="space-y-2" role="status" aria-label="Loading health check">
+              <div className="h-4 w-2/3 animate-pulse rounded bg-[#242a2e]" aria-hidden="true" />
+              <div className="h-4 w-1/2 animate-pulse rounded bg-[#242a2e]" aria-hidden="true" />
+              <div className="h-4 w-3/4 animate-pulse rounded bg-[#242a2e]" aria-hidden="true" />
+              <span className="sr-only">Loading health check data</span>
             </div>
           )}
 
@@ -96,14 +97,14 @@ export function HealthCheck() {
               <h2 className="text-sm font-medium text-[#f3f1ec]">
                 Fetched data
               </h2>
-              <pre className="overflow-x-auto rounded-md bg-[#101315] p-4 text-xs leading-relaxed text-[#f3f1ec] ring-1 ring-[#262b2f]">
+              <pre className="overflow-x-auto rounded-md bg-[#101315] p-4 text-xs leading-relaxed text-[#f3f1ec] ring-1 ring-[#262b2f]" tabIndex={0} aria-label="Fetched health check data">
 {JSON.stringify(data, null, 2)}
               </pre>
             </div>
           )}
 
           {status === "error" && (
-            <div className="rounded-md border border-[#e05555]/40 bg-[#e05555]/10 p-4 text-sm text-[#f3f1ec]">
+            <div className="rounded-md border border-[#e05555]/40 bg-[#e05555]/10 p-4 text-sm text-[#f3f1ec]" role="alert">
               <p className="font-medium text-[#e05555]">Request failed</p>
               <p className="mt-1 text-[#9aa1a6]">{error ?? "Unknown error"}</p>
             </div>
@@ -114,7 +115,7 @@ export function HealthCheck() {
           <button
             type="button"
             onClick={fetchHealth}
-            className="btn btn-primary"
+            className="btn btn-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8a73e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1d2124]"
             disabled={status === "loading"}
             aria-busy={status === "loading"}
           >

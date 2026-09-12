@@ -60,19 +60,19 @@ export function StatefulSendButton({
     >
       <span className="send-btn-stack" aria-hidden="true">
         <span className="send-btn-layer" data-active={state === "idle"}>
-          <Send className="h-4 w-4 shrink-0" />
+          <Send className="h-4 w-4 shrink-0" aria-hidden="true" focusable="false" />
           <span className="hidden sm:inline">{idleLabel}</span>
         </span>
         <span className="send-btn-layer" data-active={state === "loading"}>
-          <Loader2 className="send-btn-spinner h-4 w-4 shrink-0" />
+          <Loader2 className="send-btn-spinner h-4 w-4 shrink-0" aria-hidden="true" focusable="false" />
           <span className="hidden sm:inline">{loadingLabel}</span>
         </span>
         <span className="send-btn-layer" data-active={state === "success"}>
-          <Check className="send-btn-check h-4 w-4 shrink-0" strokeWidth={3} />
+          <Check className="send-btn-check h-4 w-4 shrink-0" strokeWidth={3} aria-hidden="true" focusable="false" />
           <span className="hidden sm:inline">{successLabel}</span>
         </span>
         <span className="send-btn-layer" data-active={state === "error"}>
-          <AlertTriangle className="h-4 w-4 shrink-0" />
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" focusable="false" />
           <span className="hidden sm:inline">{errorLabel}</span>
         </span>
       </span>

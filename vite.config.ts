@@ -19,6 +19,27 @@ export default defineConfig(({ mode }) => ({
     ...(mode === "test" || mode === "split" ? [] : [viteSingleFile()]),
   ],
 
+  build: {
+    // Lighthouse \"Avoid enormous network payloads\" and \"Reduce unused JS\"
+    chunkSizeWarningLimit: 600,
+    cssCodeSplit: true,
+    sourcemap: false,
+    // Split vendor from app so first paint is smaller and better cached.
+    ...(mode === "split"
+      ? {
+          rollupOptions: {
+            output: {
+              manualChunks: {
+                vendor: ["react", "react-dom", "react-router-dom"],
+                // three.js is already isolated via dynamic import (marquee-viewport),
+                // but this ensures any incidental three usage does not leak into the main chunk.
+              },
+            },
+          },
+        }
+      : {}),
+  },
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

@@ -32,15 +32,15 @@ export function Watchlist() {
 
       {saved.length === 0 ? (
         <div className="card flex flex-col items-start gap-3 p-6 sm:items-center sm:p-10">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#242a2e]">
-            <Bookmark className="h-6 w-6 text-[#9aa1a6]" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#242a2e]" aria-hidden="true">
+            <Bookmark className="h-6 w-6 text-[#9aa1a6]" aria-hidden="true" focusable="false" />
           </div>
           <h2 className="text-lg font-medium text-[#f3f1ec]">No movies yet</h2>
           <p className="text-center text-sm text-[#9aa1a6]">
             Start discovering films and add them to your watchlist.
           </p>
           <Link to="/" className="btn btn-primary mt-2">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" focusable="false" />
             Browse movies
           </Link>
         </div>

@@ -96,7 +96,7 @@ export function Assistant() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <header className="space-y-2">
-        <p className="text-sm font-medium uppercase tracking-widest text-[#e8a73e]">
+        <p className="text-sm font-medium uppercase tracking-widest text-[#e8a73e]" aria-hidden="true">
           AI
         </p>
 
@@ -105,7 +105,7 @@ export function Assistant() {
         </h1>
 
         <p className="max-w-xl text-sm text-[#9aa1a6] sm:text-base">
-          Ask about the Flicks catalog. Responses stream in real time.
+          Ask about the Flicks catalog. Responses stream in real time. Press <kbd className="rounded border border-[#262b2f] bg-[#242a2e] px-1 py-0.5 font-mono text-xs">Enter</kbd> to send, <kbd className="rounded border border-[#262b2f] bg-[#242a2e] px-1 py-0.5 font-mono text-xs">Shift+Enter</kbd> for a new line. A Stop button appears while the assistant is responding.
         </p>
       </header>
 

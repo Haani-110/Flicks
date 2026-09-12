@@ -51,9 +51,9 @@ export function MovieDetail() {
     <div className="space-y-10">
       <Link
         to="/"
-        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#9aa1a6] transition-colors hover:text-[#f3f1ec]"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-[#9aa1a6] transition-colors hover:text-[#f3f1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8a73e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#101315] rounded-sm"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" focusable="false" />
         Back
       </Link>
 
@@ -64,6 +64,10 @@ export function MovieDetail() {
             <img
               src={movie.posterPath}
               alt={`${movie.title} poster`}
+              width={500}
+              height={750}
+              decoding="async"
+              fetchPriority="high"
               className="aspect-[2/3] w-full object-cover"
             />
           </div>
@@ -77,16 +81,16 @@ export function MovieDetail() {
             </h1>
             <div className="flex flex-wrap items-center gap-4 text-sm text-[#9aa1a6]">
               <span className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
+                <Calendar className="h-4 w-4" aria-hidden="true" focusable="false" />
                 {movie.year}
               </span>
               <span className="flex items-center gap-1.5">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-4 w-4" aria-hidden="true" focusable="false" />
                 {movie.runtime} min
               </span>
               <span className="flex items-center gap-1.5">
-                <Star className="h-4 w-4 fill-[#e8a73e] text-[#e8a73e]" />
-                <span className="font-medium text-[#f3f1ec]">
+                <Star className="h-4 w-4 fill-[#e8a73e] text-[#e8a73e]" aria-hidden="true" focusable="false" />
+                <span className="font-medium text-[#f3f1ec]" aria-label={`Rating ${movie.rating.toFixed(1)} out of 10`}>
                   {movie.rating.toFixed(1)}
                 </span>
                 / 10
@@ -118,19 +122,19 @@ export function MovieDetail() {
             >
               {saved ? (
                 <>
-                  <Check className="h-4 w-4" />
+                  <Check className="h-4 w-4" aria-hidden="true" focusable="false" />
                   In watchlist
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-4 w-4" aria-hidden="true" focusable="false" />
                   Add to watchlist
                 </>
               )}
             </button>
             {!saved && ids.length > 0 && (
               <Link to="/watchlist" className="btn btn-primary">
-                <Bookmark className="h-4 w-4" />
+                <Bookmark className="h-4 w-4" aria-hidden="true" focusable="false" />
                 View watchlist
               </Link>
             )}

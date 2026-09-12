@@ -80,6 +80,9 @@ export function ChatTranscript({
         onScroll={handleScroll}
         role="log"
         aria-label="Conversation"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-atomic="false"
         className="h-[55vh] min-h-[320px] space-y-4 overflow-y-auto p-4 sm:p-5"
       >
         {messages.length === 0 ? (
@@ -110,9 +113,10 @@ export function ChatTranscript({
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#14181a] px-3 py-1.5 text-xs font-medium text-[#f3f1ec] shadow-lg ring-1 ring-[#262b2f] transition-colors hover:bg-[#242a2e]"
+          aria-label="Jump to latest message"
+          className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-[#14181a] px-3 py-1.5 text-xs font-medium text-[#f3f1ec] shadow-lg ring-1 ring-[#262b2f] transition-colors hover:bg-[#242a2e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e8a73e] focus-visible:ring-offset-2 focus-visible:ring-offset-[#14181a]"
         >
-          <ArrowDown className="h-3.5 w-3.5" />
+          <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" focusable="false" />
           Jump to latest
         </button>
       )}
@@ -129,8 +133,8 @@ function EmptyState({
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#242a2e]">
-        <Bot className="h-6 w-6 text-[#e8a73e]" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#242a2e]" aria-hidden="true">
+        <Bot className="h-6 w-6 text-[#e8a73e]" aria-hidden="true" focusable="false" />
       </div>
 
       <p className="max-w-sm text-sm text-[#9aa1a6]">

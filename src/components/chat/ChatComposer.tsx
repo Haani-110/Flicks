@@ -133,9 +133,9 @@ export function ChatComposer({
               type="button"
               onClick={onStop}
               aria-label="Stop generating"
-              className="btn h-10 shrink-0 bg-[#e05555] text-white hover:bg-[#c94a4a]"
+              className="btn h-10 shrink-0 bg-[#e05555] text-white hover:bg-[#c94a4a] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#e05555] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1d2124]"
             >
-              <Square className="h-4 w-4" />
+              <Square className="h-4 w-4" aria-hidden="true" focusable="false" />
               <span className="hidden sm:inline">Stop</span>
             </button>
           )}
