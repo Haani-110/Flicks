@@ -19,7 +19,6 @@ import {
 
 const OUT = "docs/screenshots";
 
-const desktop = () => test.info().project.name === "desktop";
 const mobile = () => test.info().project.name === "mobile";
 
 async function settle(page: Page, ms = 900) {
