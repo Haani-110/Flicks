@@ -18,6 +18,25 @@ Object.defineProperty(Element.prototype, "scrollTo", {
   value: () => {},
 });
 
+// Same gap on the window: the layout scrolls to the top on navigation.
+if (typeof window.scrollTo !== "function") {
+  Object.defineProperty(window, "scrollTo", {
+    configurable: true,
+    writable: true,
+    value: () => {},
+  });
+}
+
+// jsdom prints "Not implemented: HTMLCanvasElement's getContext()" for every
+// canvas and returns undefined. Returning null instead is both quieter and
+// more truthful: it is what a browser without WebGL reports, and it is the
+// branch the hero and the marquee probe are written against.
+if (typeof HTMLCanvasElement !== "undefined") {
+  HTMLCanvasElement.prototype.getContext = function getContext() {
+    return null;
+  } as typeof HTMLCanvasElement.prototype.getContext;
+}
+
 // jsdom does not implement matchMedia; the send-button motion system asks for
 // `prefers-reduced-motion` in CSS only today, but guard anyway.
 if (typeof window.matchMedia !== "function") {

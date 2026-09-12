@@ -19,7 +19,8 @@ vi.mock("@openrouter/ai-sdk-provider", () => ({
   createOpenRouter: () => () => provider.model,
 }));
 
-import handler from "./chat";
+import handler, { resetChatGuards } from "./chat";
+import { issueChatToken, resolveTokenSecret, CHAT_TOKEN_HEADER } from "../lib/chat-token.js";
 
 const USAGE = {
   inputTokens: { total: 12, noCache: 12, cacheRead: 0, cacheWrite: 0 },
@@ -43,13 +44,33 @@ function mockModel(streams: LanguageModelV3StreamPart[][]) {
   });
 }
 
-function createRequest(body: unknown, method = "POST") {
+/**
+ * A fresh, valid single-use token for the derived signing key.
+ *
+ * The route signs tokens with a key derived from `OPENROUTER_API_KEY` (see
+ * lib/chat-token.ts), so abuse protection is on wherever the AI is configured —
+ * including in these tests. Every assertion the suite made before is unchanged;
+ * the request simply carries the header a real browser now carries.
+ */
+function freshToken(): string {
+  const secret = resolveTokenSecret();
+  if (!secret) throw new Error("expected a derived token secret");
+  return issueChatToken(secret).token;
+}
+
+function createRequest(
+  body: unknown,
+  method = "POST",
+  headers: Record<string, string> = { [CHAT_TOKEN_HEADER]: freshToken() },
+) {
   const req = new EventEmitter() as EventEmitter & {
     method: string;
     body: unknown;
+    headers: Record<string, string>;
   };
   req.method = method;
   req.body = body;
+  req.headers = headers;
   return req;
 }
 
@@ -102,8 +123,12 @@ function createResponse() {
   return { res, state };
 }
 
-async function callRoute(body: unknown, method = "POST") {
-  const req = createRequest(body, method);
+async function callRoute(
+  body: unknown,
+  method = "POST",
+  headers?: Record<string, string>,
+) {
+  const req = createRequest(body, method, headers);
   const { res, state } = createResponse();
 
   await handler(
@@ -124,10 +149,12 @@ describe("POST /api/chat", () => {
   beforeEach(() => {
     process.env.OPENROUTER_API_KEY = "test-key";
     provider.model = undefined;
+    // The limiter is a per-instance in-memory store; each case starts clean.
+    resetChatGuards();
   });
 
   it("rejects any method other than POST", async () => {
-    const state = await callRoute({ messages: [USER_MESSAGE] }, "GET");
+    const state = await callRoute({ messages: [USER_MESSAGE] }, "GET", {});
 
     expect(state.status).toBe(405);
     expect(state.payload).toEqual({ error: "Method not allowed. Use POST." });
@@ -136,7 +163,9 @@ describe("POST /api/chat", () => {
   it("refuses to run without a configured API key", async () => {
     delete process.env.OPENROUTER_API_KEY;
 
-    const state = await callRoute({ messages: [USER_MESSAGE] });
+    // No key means no signing secret, so there is no token to carry — and the
+    // key check runs before token enforcement anyway.
+    const state = await callRoute({ messages: [USER_MESSAGE] }, "POST", {});
 
     expect(state.status).toBe(500);
     expect(state.payload).toEqual({ error: "AI is not configured." });
@@ -211,6 +240,127 @@ describe("POST /api/chat", () => {
     expect(state.body).toContain('"type":"tool-output-available"');
     expect(state.body).toContain("Everything Everywhere All at Once");
     expect(state.body).toContain("Three sci-fi titles fit.");
+  });
+
+  it("answers a bare GET with a signed token a subsequent POST accepts", async () => {
+    const issued = await callRoute(undefined, "GET", {});
+
+    expect(issued.status).toBe(200);
+    expect(issued.headers["cache-control"]).toBe("no-store");
+
+    const payload = issued.payload as { token?: string; expiresInMs?: number };
+    expect(typeof payload.token).toBe("string");
+    expect(payload.expiresInMs).toBeGreaterThan(0);
+
+    mockModel([[{ type: "stream-start", warnings: [] }, ...textStream("Hello.")]]);
+
+    const state = await callRoute(
+      { messages: [USER_MESSAGE] },
+      "POST",
+      { [CHAT_TOKEN_HEADER]: payload.token as string },
+    );
+
+    expect(state.body).toContain("Hello.");
+  });
+
+  it("refuses a POST that carries no token once a signing key exists", async () => {
+    const state = await callRoute({ messages: [USER_MESSAGE] }, "POST", {});
+
+    expect(state.status).toBe(401);
+    expect((state.payload as { error: string }).error).toMatch(/reload the page/i);
+  });
+
+  it("refuses to spend the same token twice", async () => {
+    const issued = await callRoute(undefined, "GET", {});
+    const token = (issued.payload as { token: string }).token;
+
+    mockModel([
+      [{ type: "stream-start", warnings: [] }, ...textStream("First.")],
+      [{ type: "stream-start", warnings: [] }, ...textStream("Second.")],
+    ]);
+
+    const first = await callRoute(
+      { messages: [USER_MESSAGE] },
+      "POST",
+      { [CHAT_TOKEN_HEADER]: token },
+    );
+    expect(first.body).toContain("First.");
+
+    const replayed = await callRoute(
+      { messages: [USER_MESSAGE] },
+      "POST",
+      { [CHAT_TOKEN_HEADER]: token },
+    );
+
+    expect(replayed.status).toBe(401);
+    expect((replayed.payload as { error: string }).error).toMatch(/already used/i);
+  });
+
+  it("throttles a caller that loops the route", async () => {
+    // 12 generations a minute is the budget; the 13th is refused without
+    // touching the model at all.
+    for (let call = 0; call < 12; call += 1) {
+      const state = await callRoute({ messages: [USER_MESSAGE] });
+      expect(state.status).not.toBe(429);
+    }
+
+    const throttled = await callRoute({ messages: [USER_MESSAGE] });
+
+    expect(throttled.status).toBe(429);
+    expect(throttled.payload).toEqual({
+      error: "Too many requests. Please wait a minute before asking again.",
+    });
+    expect(Number(throttled.headers["retry-after"])).toBeGreaterThanOrEqual(1);
+  });
+
+  it("reports the remaining budget so a client can back off before it is cut off", async () => {
+    mockModel([[{ type: "stream-start", warnings: [] }, ...textStream("Hi.")]]);
+
+    const state = await callRoute({ messages: [USER_MESSAGE] });
+
+    expect(state.headers["x-ratelimit-limit"]).toBe("12");
+    expect(state.headers["x-ratelimit-remaining"]).toBe("11");
+  });
+
+  it("refuses a body assembled from many parts to dodge the per-message limit", async () => {
+    // Every part is under the 2000-character message cap; together they are
+    // far over the byte cap for one request.
+    const parts = Array.from({ length: 40 }, (_, index) => ({
+      type: "text",
+      text: `${index}: ${"x".repeat(1900)}`,
+    }));
+
+    const state = await callRoute({
+      messages: [{ id: "1", role: "user", parts }],
+    });
+
+    expect(state.status).toBe(413);
+    expect(state.payload).toEqual({ error: "Request is too large." });
+  });
+
+  it("refuses history where the client invented the assistant's tool results", async () => {
+    const state = await callRoute({
+      messages: [
+        {
+          id: "1",
+          role: "assistant",
+          parts: [
+            {
+              type: "tool-search_movies",
+              toolCallId: "call-1",
+              state: "output-available",
+              output: { count: 0, movies: [] },
+            },
+          ],
+        },
+        USER_MESSAGE,
+      ],
+    });
+
+    expect(state.status).toBe(400);
+    expect((state.payload as { error: string }).error).toMatch(
+      /not accepted from the client/,
+    );
   });
 
   it("reports a provider failure inside the stream, without leaking the cause", async () => {

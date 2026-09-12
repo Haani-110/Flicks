@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UIMessage } from "ai";
 import { CHAT_LIMITS } from "./chat-contract";
-import { buildChatRequestBody, CHAT_API_PATH } from "./chat-transport";
+import {
+  buildChatRequestBody,
+  CHAT_API_PATH,
+  createChatTransport,
+  getChatToken,
+  resetChatTokenCache,
+} from "./chat-transport";
 
 function message(index: number, role: UIMessage["role"] = "user"): UIMessage {
   return {
@@ -62,5 +68,124 @@ describe("chat transport", () => {
     });
 
     expect(messages).toEqual(snapshot);
+  });
+});
+
+describe("getChatToken", () => {
+  /** Replaces the global fetch for one case and restores it afterwards. */
+  function stubFetch(implementation: (input: unknown, init?: RequestInit) => unknown) {
+    const spy = vi.fn(implementation);
+    vi.stubGlobal("fetch", spy);
+    return spy;
+  }
+
+  beforeEach(() => {
+    resetChatTokenCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    resetChatTokenCache();
+  });
+
+  it("collects the token the route signs before a send", async () => {
+    const spy = stubFetch(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ token: "signed.token", expiresInMs: 120_000 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+
+    expect(await getChatToken()).toBe("signed.token");
+    expect(spy).toHaveBeenCalledWith(CHAT_API_PATH, { method: "GET" });
+  });
+
+  it("reuses a still-valid token instead of asking again for every message", async () => {
+    const spy = stubFetch(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ token: "signed.token", expiresInMs: 120_000 }), {
+          status: 200,
+        }),
+      ),
+    );
+
+    expect(await getChatToken()).toBe("signed.token");
+    expect(await getChatToken()).toBe("signed.token");
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks again once the cached token is near expiry", async () => {
+    vi.useFakeTimers();
+
+    try {
+      const spy = stubFetch(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ token: `token-${spy.mock.calls.length}`, expiresInMs: 10_000 }), {
+            status: 200,
+          }),
+        ),
+      );
+
+      expect(await getChatToken()).toBe("token-1");
+
+      // Past the 10 s lifetime minus the refresh margin.
+      vi.advanceTimersByTime(9_000);
+
+      expect(await getChatToken()).toBe("token-2");
+      expect(spy).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sends nothing rather than blocking the chat when the route has no token endpoint", async () => {
+    stubFetch(() => Promise.resolve(new Response("not json", { status: 404 })));
+
+    await expect(getChatToken()).resolves.toBeNull();
+  });
+
+  it("degrades to a tokenless send when the request throws", async () => {
+    stubFetch(() => Promise.reject(new Error("offline")));
+
+    await expect(getChatToken()).resolves.toBeNull();
+  });
+
+  it("ignores a payload that is not a usable token", async () => {
+    stubFetch(() =>
+      Promise.resolve(new Response(JSON.stringify({ expiresInMs: 1000 }), { status: 200 })),
+    );
+
+    await expect(getChatToken()).resolves.toBeNull();
+  });
+});
+
+describe("createChatTransport", () => {
+  it("attaches the token header the route asks for", async () => {
+    resetChatTokenCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ token: "header.token", expiresInMs: 60_000 }), {
+            status: 200,
+          }),
+        ),
+      ),
+    );
+
+    const transport = createChatTransport();
+    const headers = (await (
+      transport as unknown as {
+        prepareSendMessagesRequest: unknown;
+        headers?: () => Promise<Record<string, string>>;
+      }
+    ).headers?.()) ?? {};
+
+    expect(headers).toEqual({ "x-flicks-chat-token": "header.token" });
+
+    vi.unstubAllGlobals();
+    resetChatTokenCache();
   });
 });

@@ -40,16 +40,20 @@ export function Assistant() {
 
   // Fold the transport status into the send-button state machine:
   // submitted/streaming -> loading, error -> error, finished -> short success flash.
+  // The send button mirrors the transport's status, which is external state
+  // owned by the AI SDK: synchronising it here is the whole point.
   useEffect(() => {
     const previous = previousStatusRef.current;
     previousStatusRef.current = status;
 
     if (status === "submitted" || status === "streaming") {
+      // eslint-disable-next-line react/set-state-in-effect
       setSendState("loading");
       return;
     }
 
     if (status === "error") {
+      // eslint-disable-next-line react/set-state-in-effect
       setSendState("error");
       return;
     }
