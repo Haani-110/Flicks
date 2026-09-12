@@ -2,6 +2,7 @@
 
 Branch: `arena/01a09647-flicks` (from `main@bb0ae3e`) · Date: 2026-09-12
 Sequence followed: AUDIT → IMPLEMENT → TEST → FIX → REGRESSION CHECK → BUILD → PRODUCTION CHECK → FINAL REVIEW.
+Merged to `main` as PR #2 (`29b5f2a`) and PR #3 (`16066ac`); screenshots captured by CI and committed as `2e3f763`.
 
 ---
 
@@ -125,26 +126,26 @@ Functions    : 95.90% ( 281/293 )          Lines    : 95.41% ( 979/1026 )
 - Regression checklist (`docs/REGRESSION-BASELINE.md`) walked item by item;
   every line passes or is listed under remaining issues below.
 - Playwright e2e (watchlist flow, assistant incl. token handshake + retry,
-  marquee in real Chromium) runs in CI on every push; it cannot run in this
-  sandbox (no browser install possible), which is stated, not hidden.
+  marquee in real Chromium) runs in CI on every push and passed on the branch,
+  on both PRs and on `main`; it cannot run in this sandbox (no browser install
+  possible), which is stated, not hidden.
+- `docs/screenshots/` was filled by CI's Chromium (run 34707680770, triggered
+  by tag `screenshots-2026-09-12`) and committed back — eight real captures,
+  two of them reviewed by eye before this report was finalised.
 - Coverage artifacts and per-job summaries publish on each CI run.
 
 ## 7. Remaining issues (honest)
 
 1. **Hosted URL is login-gated.** Vercel Deployment Protection is on for the
    project; the owner must disable it for a public link. App unaffected.
-2. **`docs/screenshots/` is empty until the Screenshots workflow runs** (it
-   needs GitHub Actions' Chromium; this sandbox cannot install browsers). The
-   workflow is committed and dispatchable; README images resolve once it has
-   run on the branch.
-3. **In-memory limiter/token store**: cold starts reset them; cross-instance
+2. **In-memory limiter/token store**: cold starts reset them; cross-instance
    token replay is theoretically possible. Documented trade; upgrade path is
    a platform WAF rule.
-4. **SPA SEO**: runtime canonical/OG means no-JS crawlers see only static
+3. **SPA SEO**: runtime canonical/OG means no-JS crawlers see only static
    tags. SSR would change the architecture; deliberately not taken.
-5. **No branch protection on `main`** — requires owner action in GitHub
+4. **No branch protection on `main`** — requires owner action in GitHub
    settings (require the `CI green` check); the workflow gate exists.
-6. **No Lighthouse trace in CI**; bundle figures are Vite build output, not a
+5. **No Lighthouse trace in CI**; bundle figures are Vite build output, not a
    lab trace.
 
 ## 8. Final submission
@@ -152,8 +153,11 @@ Functions    : 95.90% ( 281/293 )          Lines    : 95.41% ( 979/1026 )
 - **Production URL:** Vercel project `flicks` (auto-deploys from `main`);
   currently behind Deployment Protection — see remaining issue 1. Locally:
   `npm run dev` → http://localhost:5173.
-- **GitHub repo:** https://github.com/Haani-110/Flicks — branch
-  `arena/01a09647-flicks` (this work), PR to `main` carries the upgrade.
+- **GitHub repo:** https://github.com/Haani-110/Flicks — the upgrade landed on
+  `main` via PR #2 (merge `29b5f2a`); the capture-trigger fix followed as
+  PR #3 (`16066ac`); CI-captured screenshots committed as `2e3f763`. CI on
+  `main` is green (runs 34707498547, 34707674460); the previously red `main`
+  run 34702536252 is the pre-upgrade baseline.
 - **README:** rewritten at the repo root — live-demo status, CI-captured
   screenshots, features, stack, architecture, structure, getting started, env
   table, production config, security model, engineering decisions,
